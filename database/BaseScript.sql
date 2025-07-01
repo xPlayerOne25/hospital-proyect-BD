@@ -184,6 +184,8 @@ CREATE TABLE HISTORIAL_MEDICO (
     FOREIGN KEY (fk_historialmed_CURP) REFERENCES PACIENTE(CURP)
 );
 
+
+
 -- 19. HISTORIAL_DETALLE
 CREATE TABLE HISTORIAL_DETALLE (
     id_historialmeddetalle INT IDENTITY(1,1) PRIMARY KEY,
@@ -194,6 +196,17 @@ CREATE TABLE HISTORIAL_DETALLE (
     diagnostico VARCHAR(100),
     FOREIGN KEY (fk_id_historialMed) REFERENCES HISTORIAL_MEDICO(id_historialMed)
 );
+
+-- Agregar campos faltantes a HISTORIAL_DETALLE
+ALTER TABLE HISTORIAL_DETALLE ADD tipo_sangre VARCHAR(5);
+ALTER TABLE HISTORIAL_DETALLE ADD alergias VARCHAR(200);
+ALTER TABLE HISTORIAL_DETALLE ADD padecimientos_previos VARCHAR(200);
+ALTER TABLE HISTORIAL_DETALLE ADD peso DECIMAL(5,2);
+ALTER TABLE HISTORIAL_DETALLE ADD estatura DECIMAL(3,2);
+
+ALTER TABLE HISTORIAL_DETALLE ADD cedula_medico VARCHAR(20);
+ALTER TABLE HISTORIAL_DETALLE ADD CONSTRAINT FK_HISTORIAL_MEDICO 
+    FOREIGN KEY (cedula_medico) REFERENCES MEDICO(cedula);
 
 -- 20. SERVICIO
 CREATE TABLE SERVICIO (
@@ -232,6 +245,17 @@ CREATE TABLE VENTA_DETALLE (
     FOREIGN KEY (fk_id_servicio) REFERENCES SERVICIO(id_servicio),
     FOREIGN KEY (fk_id_venta) REFERENCES VENTA(id_venta)
 );
+
+--SERVICIO_VENDIDO
+CREATE TABLE SERVICIO_VENDIDO (
+  id_servicio_vendido INT IDENTITY(1,1) PRIMARY KEY,
+  fk_folio_cita INT NOT NULL,
+  fk_id_servicio INT NOT NULL,
+  cantidad INT NOT NULL DEFAULT 1,
+  FOREIGN KEY (fk_folio_cita) REFERENCES CITA(folio_cita),
+  FOREIGN KEY (fk_id_servicio) REFERENCES SERVICIO(id_servicio)
+);
+
 
 -- =====================================================
 -- INSERTAR DATOS DE PRUEBA (10 REGISTROS POR TABLA)
@@ -380,18 +404,20 @@ ORDER BY id_empleado;
 -- MEDICOS CON IDs CORRECTOS (4-13)
 -- =====================================================
 
--- Usar los id_empleado que SÍ existen: 4, 5, 6, 7, 8, 9, 10, 11, 12, 13
+
+
 INSERT INTO MEDICO (cedula, fk_med_id_empleado, fk_id_especialidad, fk_id_consultorio) VALUES
-('CED123456789', 4, 1, 1),  -- Roberto González - Cardiólogo
-('CED987654321', 5, 2, 2),  -- Laura Hernández - Dermatólogo
-('CED456789123', 6, 3, 3),  -- Carlos Ramírez - Ginecólogo
-('CED789123456', 7, 4, 4),  -- Sofía Sánchez - Medicina General
-('CED321654987', 8, 5, 5),  -- Pedro Pérez - Nefrólogo
-('CED654321789', 9, 6, 6),  -- Antonio Martínez - Nutriólogo
-('CED159753486', 10, 7, 7), -- Valeria García - Oftalmólogo
-('CED486159753', 11, 8, 8), -- David López - Oncólogo
-('CED753159486', 12, 9, 9), -- Alma Hernández - Ortopedista
-('CED357951468', 13, 10, 10); -- Fernando Rodríguez - Pediatra
+('CED123456789', 29, 1, 1),  -- Roberto González - Cardiólogo
+('CED987654321', 30, 2, 2),  -- Laura Hernández - Dermatóloga
+('CED456789123', 31, 3, 3),  -- Carlos Ramírez - Ginecólogo
+('CED789123456', 32, 4, 4),  -- Sofía Sánchez - Medicina General
+('CED321654987', 33, 5, 5),  -- Pedro Pérez - Nefrólogo
+('CED654321789', 34, 6, 6),  -- Antonio Martínez - Nutriólogo
+('CED159753486', 35, 7, 7),  -- Valeria García - Oftalmóloga
+('CED486159753', 36, 8, 8),  -- David López - Oncólogo
+('CED753159486', 37, 9, 9),  -- Alma Hernández - Ortopedista
+('CED357951468', 38, 10, 10); -- Fernando Rodríguez - Pediatra
+
 
 -- Verificar que se crearon correctamente
 SELECT 
@@ -408,13 +434,27 @@ ORDER BY m.cedula;
 -- Ver total de médicos creados
 SELECT COUNT(*) AS Total_Medicos FROM MEDICO;
 
--- RECEPCIONISTAS
+-- RECEPCIONISTAS (usamos ID 32 y 37 como ejemplo)
 INSERT INTO RECEPCION (fk_recepcion_id_empleado) VALUES
-(4), (9);
+(32), (37);
+-- AGREGANDO NUEVOS EMPLEADOS
+
+-- Paso 1: Insertar nuevos empleados (usa direcciones, usuarios y horarios válidos)
+INSERT INTO EMPLEADO (
+    fk_empleado_id_direccion, fk_id_horario, fk_id_empleadoEstatus,
+    fk_empleado_id_usuario, empleado_CURP, empleado_nombre,
+    empleado_paterno, empleado_materno, empleado_tel,
+    empleado_correo, empleado_sueldo
+)
+VALUES
+(1, 5, 1, 1, 'FARM123456HDFRZN01', 'Sandra', 'López', 'Ramírez', '5558881234', 'sandra.lopez@hospital.com', 18000),
+(2, 6, 1, 2, 'FARM654321HDFRZN02', 'Jorge', 'Mendoza', 'González', '5558885678', 'jorge.mendoza@hospital.com', 18500);
+
+
 
 -- FARMACÉUTICOS
 INSERT INTO FARMACEUTICO (fk_farmaceutico_id_empleado) VALUES
-(5), (10);
+(39), (40);
 
 -- ESTATUS DE CITAS
 INSERT INTO CITA_ESTATUS (estatusCita, descripcion) VALUES
@@ -958,4 +998,240 @@ FROM MEDICO M
 JOIN EMPLEADO E ON M.fk_med_id_empleado = E.id_empleado
 JOIN HORARIO H ON E.fk_id_horario = H.id_horario
 
+-- ===============================
+-- VERIFICAR Y CREAR TABLA RECETA
+-- ===============================
 
+-- Primero verificar si la tabla existe
+IF EXISTS (SELECT * FROM sysobjects WHERE name='RECETA' AND xtype='U')
+BEGIN
+    PRINT 'La tabla RECETA ya existe. Verificando estructura...';
+    
+    -- Verificar columnas existentes
+    SELECT 
+        COLUMN_NAME,
+        DATA_TYPE,
+        IS_NULLABLE,
+        CHARACTER_MAXIMUM_LENGTH
+    FROM INFORMATION_SCHEMA.COLUMNS 
+    WHERE TABLE_NAME = 'RECETA'
+    ORDER BY ORDINAL_POSITION;
+END
+ELSE
+BEGIN
+    PRINT 'Creando tabla RECETA...';
+    
+    CREATE TABLE RECETA (
+        id_receta INT IDENTITY(1,1) PRIMARY KEY,
+        folio_receta VARCHAR(30) UNIQUE NOT NULL,
+        fk_folio_cita INT NOT NULL,
+        fk_cedula_medico VARCHAR(20) NOT NULL,
+        fk_curp_paciente VARCHAR(18) NOT NULL,
+        fecha_emision DATETIME NOT NULL DEFAULT GETDATE(),
+        diagnostico VARCHAR(200) NOT NULL,
+        tratamiento VARCHAR(800) NOT NULL,
+        medicamentos VARCHAR(2000) NOT NULL,
+        observaciones_generales VARCHAR(800),
+        estatus_receta VARCHAR(20) DEFAULT 'Activa',
+        fecha_modificacion DATETIME DEFAULT GETDATE(),
+        
+        -- Constraints (sin foreign keys por ahora para evitar errores)
+        CONSTRAINT CK_RECETA_estatus CHECK (estatus_receta IN ('Activa', 'Cancelada', 'Vencida'))
+    );
+    
+    -- Crear índices
+    CREATE INDEX IX_RECETA_cedula_medico ON RECETA(fk_cedula_medico);
+    CREATE INDEX IX_RECETA_curp_paciente ON RECETA(fk_curp_paciente);
+    CREATE INDEX IX_RECETA_folio_cita ON RECETA(fk_folio_cita);
+    CREATE INDEX IX_RECETA_fecha_emision ON RECETA(fecha_emision);
+    
+    PRINT 'Tabla RECETA creada correctamente con índices';
+END
+
+-- Verificar estructura final
+PRINT 'Estructura actual de la tabla RECETA:';
+SELECT 
+    COLUMN_NAME as 'Columna',
+    DATA_TYPE + 
+    CASE 
+        WHEN CHARACTER_MAXIMUM_LENGTH IS NOT NULL 
+        THEN '(' + CAST(CHARACTER_MAXIMUM_LENGTH AS VARCHAR) + ')'
+        ELSE ''
+    END as 'Tipo',
+    CASE WHEN IS_NULLABLE = 'YES' THEN 'NULL' ELSE 'NOT NULL' END as 'Nulable',
+    COLUMN_DEFAULT as 'Valor_Por_Defecto'
+FROM INFORMATION_SCHEMA.COLUMNS 
+WHERE TABLE_NAME = 'RECETA'
+ORDER BY ORDINAL_POSITION;
+
+------------------------------------------------------
+
+-- ===============================
+-- VERIFICAR Y CREAR TABLA RECETA PASO A PASO
+-- ===============================
+
+-- 1. Verificar si la tabla existe
+PRINT '1. Verificando si la tabla RECETA existe...';
+IF EXISTS (SELECT * FROM sysobjects WHERE name='RECETA' AND xtype='U')
+BEGIN
+    PRINT '   ✅ La tabla RECETA ya existe';
+    
+    -- Mostrar estructura actual
+    PRINT '   📋 Estructura actual:';
+    SELECT 
+        COLUMN_NAME as 'Columna',
+        DATA_TYPE + 
+        CASE 
+            WHEN CHARACTER_MAXIMUM_LENGTH IS NOT NULL 
+            THEN '(' + CAST(CHARACTER_MAXIMUM_LENGTH AS VARCHAR) + ')'
+            ELSE ''
+        END as 'Tipo',
+        CASE WHEN IS_NULLABLE = 'YES' THEN 'NULL' ELSE 'NOT NULL' END as 'Nulable'
+    FROM INFORMATION_SCHEMA.COLUMNS 
+    WHERE TABLE_NAME = 'RECETA'
+    ORDER BY ORDINAL_POSITION;
+    
+    -- Verificar si tiene datos
+    DECLARE @total_recetas INT;
+    SELECT @total_recetas = COUNT(*) FROM RECETA;
+    PRINT '   📊 Total de recetas existentes: ' + CAST(@total_recetas AS VARCHAR);
+    
+    -- Si quieres recrear la tabla, descomenta las siguientes líneas:
+    -- PRINT '   🗑️ Eliminando tabla existente...';
+    -- DROP TABLE RECETA;
+    -- PRINT '   ✅ Tabla eliminada';
+END
+ELSE
+BEGIN
+    PRINT '   ❌ La tabla RECETA NO existe';
+END
+
+-- 2. Crear la tabla si no existe
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='RECETA' AND xtype='U')
+BEGIN
+    PRINT '2. Creando tabla RECETA...';
+    
+    CREATE TABLE RECETA (
+        id_receta INT IDENTITY(1,1) PRIMARY KEY,
+        folio_receta VARCHAR(30) UNIQUE NOT NULL,
+        fk_folio_cita INT NOT NULL,
+        fk_cedula_medico VARCHAR(20) NOT NULL,
+        fk_curp_paciente VARCHAR(18) NOT NULL,
+        fecha_emision DATETIME NOT NULL DEFAULT GETDATE(),
+        diagnostico VARCHAR(200) NOT NULL,
+        tratamiento VARCHAR(800) NOT NULL,
+        medicamentos VARCHAR(2000) NOT NULL,
+        observaciones_generales VARCHAR(800),
+        estatus_receta VARCHAR(20) DEFAULT 'Activa',
+        fecha_modificacion DATETIME DEFAULT GETDATE()
+    );
+    
+    -- Crear índices para mejorar performance
+    CREATE INDEX IX_RECETA_cedula_medico ON RECETA(fk_cedula_medico);
+    CREATE INDEX IX_RECETA_curp_paciente ON RECETA(fk_curp_paciente);
+    CREATE INDEX IX_RECETA_folio_cita ON RECETA(fk_folio_cita);
+    CREATE INDEX IX_RECETA_fecha_emision ON RECETA(fecha_emision);
+    
+    PRINT '   ✅ Tabla RECETA creada correctamente con índices';
+END
+ELSE
+BEGIN
+    PRINT '2. ✅ La tabla RECETA ya existe, no es necesario crearla';
+END
+
+-- 3. Verificar estructura final
+PRINT '3. Estructura final de la tabla RECETA:';
+SELECT 
+    COLUMN_NAME as 'Columna',
+    DATA_TYPE + 
+    CASE 
+        WHEN CHARACTER_MAXIMUM_LENGTH IS NOT NULL 
+        THEN '(' + CAST(CHARACTER_MAXIMUM_LENGTH AS VARCHAR) + ')'
+        WHEN NUMERIC_PRECISION IS NOT NULL
+        THEN '(' + CAST(NUMERIC_PRECISION AS VARCHAR) + 
+             CASE WHEN NUMERIC_SCALE IS NOT NULL 
+                  THEN ',' + CAST(NUMERIC_SCALE AS VARCHAR) 
+                  ELSE '' END + ')'
+        ELSE ''
+    END as 'Tipo_Completo',
+    CASE WHEN IS_NULLABLE = 'YES' THEN 'SÍ' ELSE 'NO' END as 'Permite_NULL',
+    COLUMN_DEFAULT as 'Valor_Por_Defecto'
+FROM INFORMATION_SCHEMA.COLUMNS 
+WHERE TABLE_NAME = 'RECETA'
+ORDER BY ORDINAL_POSITION;
+
+-- 4. Probar inserción de una receta de prueba
+PRINT '4. Probando inserción de receta de prueba...';
+BEGIN TRY
+    -- Obtener una cita atendida para la prueba
+    DECLARE @folio_prueba INT;
+    DECLARE @cedula_prueba VARCHAR(20);
+    DECLARE @curp_prueba VARCHAR(18);
+    
+    SELECT TOP 1 
+        @folio_prueba = c.folio_cita,
+        @cedula_prueba = m.cedula,
+        @curp_prueba = c.fk_cita_CURP
+    FROM CITA c
+    INNER JOIN MEDICO m ON c.fk_cedula = m.cedula
+    LEFT JOIN CITA_ESTATUS cs ON c.fk_id_citaEstatus = cs.id_citaEstatus
+    WHERE cs.estatusCita = 'Atendida';
+    
+    IF @folio_prueba IS NOT NULL
+    BEGIN
+        -- Verificar si ya existe receta para esta cita
+        IF NOT EXISTS (SELECT 1 FROM RECETA WHERE fk_folio_cita = @folio_prueba)
+        BEGIN
+            INSERT INTO RECETA (
+                folio_receta,
+                fk_folio_cita,
+                fk_cedula_medico,
+                fk_curp_paciente,
+                diagnostico,
+                tratamiento,
+                medicamentos,
+                observaciones_generales
+            )
+            VALUES (
+                'REC-PRUEBA-' + CAST(@folio_prueba AS VARCHAR),
+                @folio_prueba,
+                @cedula_prueba,
+                @curp_prueba,
+                'Diagnóstico de prueba',
+                'Tratamiento de prueba',
+                'Paracetamol 500mg - Cada 8 horas por 3 días',
+                'Receta de prueba del sistema'
+            );
+            
+            PRINT '   ✅ Receta de prueba insertada correctamente';
+            PRINT '   📝 Folio: REC-PRUEBA-' + CAST(@folio_prueba AS VARCHAR);
+        END
+        ELSE
+        BEGIN
+            PRINT '   ℹ️ Ya existe una receta para la cita de prueba';
+        END
+    END
+    ELSE
+    BEGIN
+        PRINT '   ⚠️ No se encontraron citas atendidas para hacer la prueba';
+    END
+END TRY
+BEGIN CATCH
+    PRINT '   ❌ Error al insertar receta de prueba: ' + ERROR_MESSAGE();
+END CATCH
+
+PRINT '===============================';
+PRINT '✅ Verificación completada';
+PRINT '===============================';
+
+SELECT * FROM PACIENTE
+
+SELECT * FROM CITA_ESTATUS
+
+UPDATE USUARIO 
+SET contrasena = HASHBYTES('SHA2_256', 'Doctor5411!')
+WHERE usuario_nombre = 'dr.gregory.house';
+
+SELECT * FROM PACIENTE
+SELECT * FROM EMPLEADO
+SELECT * FROM EMPLEADO_ESTATUS

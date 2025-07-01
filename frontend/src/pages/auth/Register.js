@@ -1,6 +1,8 @@
+// src/pages/auth/Register.jsx - CORREGIDO
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import '../../styles/components.css';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -100,160 +102,244 @@ const Register = () => {
   };
 
   return (
-    <div className="auth-container">
-      <div className="auth-card" style={{ maxWidth: '600px' }}>
-        <div className="auth-header">
-          <h1 className="auth-title">🏥 Hospital System</h1>
-          <p className="auth-subtitle">Registro de Paciente</p>
+    <div className="modern-auth-container">
+      <div className="modern-auth-background">
+        <div className="auth-pattern"></div>
+      </div>
+      
+      <div className="modern-auth-content register-layout">
+        <div className="auth-form-section register-form">
+          <div className="auth-form-container">
+            <div className="form-header">
+              <h2 className="form-title">Crear Cuenta</h2>
+              <p className="form-subtitle">Regístrate como paciente</p>
+            </div>
+
+            {error && (
+              <div className="modern-alert modern-alert-error">
+                <span className="alert-icon">⚠️</span>
+                <span>{error}</span>
+              </div>
+            )}
+
+            {success && (
+              <div className="modern-alert modern-alert-success">
+                <span className="alert-icon">✅</span>
+                <span>{success}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="modern-form">
+              {/* Datos de usuario */}
+              <div className="row">
+                <div className="col-md-6">
+                  <div className="form-group-modern">
+                    <label className="form-label-modern">Nombre de Usuario *</label>
+                    <div className="input-container">
+                      <span className="input-icon">👤</span>
+                      <input
+                        type="text"
+                        className="form-input-modern"
+                        name="usuario_nombre"
+                        value={formData.usuario_nombre}
+                        onChange={handleChange}
+                        placeholder="Ej: juan.perez"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="col-md-6">
+                  <div className="form-group-modern">
+                    <label className="form-label-modern">Correo Electrónico *</label>
+                    <div className="input-container">
+                      <span className="input-icon">📧</span>
+                      <input
+                        type="email"
+                        className="form-input-modern"
+                        name="usuario_correo"
+                        value={formData.usuario_correo}
+                        onChange={handleChange}
+                        placeholder="correo@ejemplo.com"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="row">
+                <div className="col-md-6">
+                  <div className="form-group-modern">
+                    <label className="form-label-modern">Contraseña *</label>
+                    <div className="input-container">
+                      <span className="input-icon">🔒</span>
+                      <input
+                        type="password"
+                        className="form-input-modern"
+                        name="contrasena"
+                        value={formData.contrasena}
+                        onChange={handleChange}
+                        placeholder="Mínimo 6 caracteres"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="col-md-6">
+                  <div className="form-group-modern">
+                    <label className="form-label-modern">Confirmar Contraseña *</label>
+                    <div className="input-container">
+                      <span className="input-icon">🔒</span>
+                      <input
+                        type="password"
+                        className="form-input-modern"
+                        name="confirmarContrasena"
+                        value={formData.confirmarContrasena}
+                        onChange={handleChange}
+                        placeholder="Repite tu contraseña"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Datos personales */}
+              <div className="row">
+                <div className="col-md-4">
+                  <div className="form-group-modern">
+                    <label className="form-label-modern">Nombre(s) *</label>
+                    <div className="input-container">
+                      <span className="input-icon">👤</span>
+                      <input
+                        type="text"
+                        className="form-input-modern"
+                        name="pac_nombre"
+                        value={formData.pac_nombre}
+                        onChange={handleChange}
+                        placeholder="Juan Carlos"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="col-md-4">
+                  <div className="form-group-modern">
+                    <label className="form-label-modern">Apellido Paterno *</label>
+                    <div className="input-container">
+                      <span className="input-icon">👨</span>
+                      <input
+                        type="text"
+                        className="form-input-modern"
+                        name="pac_paterno"
+                        value={formData.pac_paterno}
+                        onChange={handleChange}
+                        placeholder="Pérez"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="col-md-4">
+                  <div className="form-group-modern">
+                    <label className="form-label-modern">Apellido Materno</label>
+                    <div className="input-container">
+                      <span className="input-icon">👩</span>
+                      <input
+                        type="text"
+                        className="form-input-modern"
+                        name="pac_materno"
+                        value={formData.pac_materno}
+                        onChange={handleChange}
+                        placeholder="García"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="row">
+                <div className="col-md-6">
+                  <div className="form-group-modern">
+                    <label className="form-label-modern">CURP *</label>
+                    <div className="input-container">
+                      <span className="input-icon">🆔</span>
+                      <input
+                        type="text"
+                        className="form-input-modern font-monospace"
+                        name="CURP"
+                        value={formData.CURP}
+                        onChange={handleChange}
+                        maxLength="18"
+                        style={{ textTransform: 'uppercase' }}
+                        placeholder="PEGG850615HDFRZN01"
+                        required
+                      />
+                    </div>
+                    <small className="form-hint">18 caracteres del CURP oficial</small>
+                  </div>
+                </div>
+                <div className="col-md-6">
+                  <div className="form-group-modern">
+                    <label className="form-label-modern">Fecha de Nacimiento *</label>
+                    <div className="input-container">
+                      <span className="input-icon">📅</span>
+                      <input
+                        type="date"
+                        className="form-input-modern"
+                        name="pac_fechaNacimiento"
+                        value={formData.pac_fechaNacimiento}
+                        onChange={handleChange}
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="form-group-modern">
+                <label className="form-label-modern">Teléfono *</label>
+                <div className="input-container">
+                  <span className="input-icon">📱</span>
+                  <input
+                    type="tel"
+                    className="form-input-modern"
+                    name="pac_tel"
+                    value={formData.pac_tel}
+                    onChange={handleChange}
+                    maxLength="10"
+                    placeholder="5512345678"
+                    required
+                  />
+                </div>
+                <small className="form-hint">10 dígitos sin espacios ni guiones</small>
+              </div>
+
+              <button 
+                type="submit" 
+                className="btn-modern btn-modern-primary"
+                disabled={loading}
+                style={{ width: '100%' }}
+              >
+                {loading ? (
+                  <>
+                    <span className="loading-spinner"></span>
+                    Creando cuenta...
+                  </>
+                ) : (
+                  'Crear Cuenta ✓'
+                )}
+              </button>
+
+              <div className="form-footer">
+                <p>¿Ya tienes cuenta? 
+                  <Link to="/login" className="link-modern">Inicia sesión aquí</Link>
+                </p>
+              </div>
+            </form>
+          </div>
         </div>
-
-        {error && <div className="alert alert-error">{error}</div>}
-        {success && <div className="alert alert-success">{success}</div>}
-
-        <form onSubmit={handleSubmit}>
-          {/* Datos de usuario */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-            <div className="form-group">
-              <label className="form-label">Nombre de Usuario *</label>
-              <input
-                type="text"
-                className="form-input"
-                name="usuario_nombre"
-                value={formData.usuario_nombre}
-                onChange={handleChange}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Correo Electrónico *</label>
-              <input
-                type="email"
-                className="form-input"
-                name="usuario_correo"
-                value={formData.usuario_correo}
-                onChange={handleChange}
-                required
-              />
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-            <div className="form-group">
-              <label className="form-label">Contraseña *</label>
-              <input
-                type="password"
-                className="form-input"
-                name="contrasena"
-                value={formData.contrasena}
-                onChange={handleChange}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Confirmar Contraseña *</label>
-              <input
-                type="password"
-                className="form-input"
-                name="confirmarContrasena"
-                value={formData.confirmarContrasena}
-                onChange={handleChange}
-                required
-              />
-            </div>
-          </div>
-
-          {/* Datos personales */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-            <div className="form-group">
-              <label className="form-label">Nombre(s) *</label>
-              <input
-                type="text"
-                className="form-input"
-                name="pac_nombre"
-                value={formData.pac_nombre}
-                onChange={handleChange}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Apellido Paterno *</label>
-              <input
-                type="text"
-                className="form-input"
-                name="pac_paterno"
-                value={formData.pac_paterno}
-                onChange={handleChange}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Apellido Materno</label>
-              <input
-                type="text"
-                className="form-input"
-                name="pac_materno"
-                value={formData.pac_materno}
-                onChange={handleChange}
-              />
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-            <div className="form-group">
-              <label className="form-label">CURP *</label>
-              <input
-                type="text"
-                className="form-input"
-                name="CURP"
-                value={formData.CURP}
-                onChange={handleChange}
-                maxLength="18"
-                style={{ textTransform: 'uppercase' }}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Fecha de Nacimiento *</label>
-              <input
-                type="date"
-                className="form-input"
-                name="pac_fechaNacimiento"
-                value={formData.pac_fechaNacimiento}
-                onChange={handleChange}
-                required
-              />
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Teléfono *</label>
-            <input
-              type="tel"
-              className="form-input"
-              name="pac_tel"
-              value={formData.pac_tel}
-              onChange={handleChange}
-              maxLength="10"
-              placeholder="10 dígitos"
-              required
-            />
-          </div>
-
-          <button 
-            type="submit" 
-            className="btn btn-primary btn-lg" 
-            style={{ width: '100%' }}
-            disabled={loading}
-          >
-            {loading ? 'Registrando...' : 'Crear Cuenta'}
-          </button>
-
-          <div className="text-center mt-3">
-            <Link to="/login" className="link">
-              ¿Ya tienes cuenta? Inicia sesión aquí
-            </Link>
-          </div>
-        </form>
       </div>
     </div>
   );

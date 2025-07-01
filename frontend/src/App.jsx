@@ -3,6 +3,10 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
 
+// Páginas de pago (FUERA de protección para que PayPal pueda acceder)
+import PagoExito from './pages/paciente/PagoExito';
+import PagoTarjeta from './pages/paciente/PagoTarjeta';
+
 // Pages
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
@@ -21,11 +25,17 @@ function App() {
       <Router>
         <div className="App">
           <Routes>
-            {/* Rutas públicas - TODAS simples */}
+            {/* ===== RUTAS PÚBLICAS (Sin autenticación) ===== */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             
-            {/* Rutas protegidas por rol */}
+            {/* ===== RUTAS DE PAGO (Públicas para PayPal) ===== */}
+            <Route path="/pago-exito" element={<PagoExito />} />
+            <Route path="/paciente/pago-exito" element={<PagoExito />} />
+            <Route path="/pago-tarjeta" element={<PagoTarjeta />} />
+            <Route path="/paciente/pago-tarjeta" element={<PagoTarjeta />} />
+            
+            {/* ===== RUTAS PROTEGIDAS POR ROL ===== */}
             <Route 
               path="/paciente/*" 
               element={
@@ -62,11 +72,22 @@ function App() {
               } 
             />
             
-            {/* Redirección por defecto */}
+            {/* ===== REDIRECCIONES ===== */}
             <Route path="/" element={<Navigate to="/login" replace />} />
             
-            {/* 404 */}
-            <Route path="*" element={<div className="error-404">Página no encontrada</div>} />
+            {/* ===== 404 ===== */}
+            <Route path="*" element={
+              <div style={{ 
+                textAlign: 'center', 
+                padding: '50px',
+                fontSize: '18px',
+                color: '#666'
+              }}>
+                <h2>404 - Página no encontrada</h2>
+                <p>La página que buscas no existe.</p>
+                <a href="/login" style={{ color: '#007bff' }}>Volver al inicio</a>
+              </div>
+            } />
           </Routes>
         </div>
       </Router>

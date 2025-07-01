@@ -1,0 +1,154 @@
+/* Botones */
+.btn-ver {
+  margin-top: 10px;
+  padding: 8px 14px;
+  border: none;
+  background: #2980b9;
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+.btn-ver:hover {
+  background: #1f5d8b;
+}
+
+.btn-cerrar,
+.btn-imprimir {
+  margin-top: 1.5rem;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.btn-cerrar {
+  background: #e74c3c;
+  color: white;
+}
+.btn-cerrar:hover {
+  background: #c0392b;
+}
+.btn-imprimir {
+  background: #5286ef;
+  color: white;
+}
+.btn-imprimir:hover {
+  background: #3c6edc;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+.modal-receta {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 12px;
+  max-width: 700px;
+  width: 95%;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  position: relative;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+/* Diseño de la receta (impresion) */
+.receta-formato {
+  width: 21cm;
+  min-height: 29.7cm;
+  padding: 2cm;
+  font-family: 'Georgia', serif;
+  background: white;
+  color: #000;
+  border: 1px solid #000;
+  box-shadow: 0 0 5px rgba(157, 24, 24, 0.2);
+  position: relative;
+}
+
+.receta-formato h2.titulo-receta {
+  text-align: center;
+  font-size: 24px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-bottom: 2px solid #355dff;
+  padding-bottom: 5px;
+}
+
+.receta-formato hr {
+  margin: 20px 0;
+  border: 0;
+  border-top: 1px solid #257ae3;
+}
+
+.receta-formato p {
+  margin-bottom: 10px;
+  line-height: 1.6;
+  font-size: 16px;
+}
+
+.receta-formato ul {
+  padding-left: 20px;
+  list-style-type: disc;
+  margin-top: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+/* Firma y sello */
+.firma-sello {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 60px;
+  font-size: 14px;
+}
+.linea-firma,
+.linea-sello {
+  width: 45%;
+  text-align: center;
+}
+.linea-firma::before,
+.linea-sello::before {
+  content: "";
+  display: block;
+  border-top: 1px solid #000;
+  margin-bottom: 5px;
+  height: 1px;
+}
+
+.encabezado-receta {
+  display: flex;
+  align-items: center;
+  justify-content: start;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.logo-receta {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+}
+
+.info-hospital {
+  flex-grow: 1;
+}
+
+.info-hospital h1 {
+  font-size: 20px;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.info-hospital p {
+  margin: 2px 0;
+  font-size: 14px;
+}

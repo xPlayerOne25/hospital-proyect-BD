@@ -26,3 +26,5 @@ BEGIN
     WHERE p.CURP = @curp;
 END;
 GO
+
+SELECT * FROM USUARIO

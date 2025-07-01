@@ -52,3 +52,20 @@ exports.actualizarPerfil = async (req, res) => {
     res.status(500).json({ success: false, message: 'Error al actualizar perfil' });
   }
 };
+
+exports.obtenerRecetasPaciente = async (req, res) => {
+  try {
+    const curp = req.user.curp;
+
+    const result = await executeStoredProcedure('sp_getRecetasPaciente', {
+      curp_paciente: curp
+    });
+
+    res.json({ success: true, data: result.recordset });
+  } catch (error) {
+    console.error('❌ Error al obtener recetas del paciente:', error);
+    res.status(500).json({ success: false, message: 'Error al obtener recetas' });
+  }
+};
+
+

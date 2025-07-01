@@ -1,7 +1,8 @@
+// src/pages/auth/Login.jsx - CORREGIDO
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-
+import '../../styles/components.css';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -61,62 +62,153 @@ const Login = () => {
   };
 
   return (
-    <div className="auth-container">
-      <div className="auth-card">
-        <div className="auth-header">
-          <h1 className="auth-title">🏥 Hospital System</h1>
-          <p className="auth-subtitle">Inicia sesión en tu cuenta</p>
+    <div className="modern-auth-container">
+      <div className="modern-auth-background">
+        <div className="auth-pattern"></div>
+      </div>
+      
+      <div className="modern-auth-content">
+        {/* Left side - Branding */}
+        <div className="auth-branding">
+          <div className="brand-content">
+            <div className="brand-icon">
+              <div className="medical-cross">
+                <div className="cross-horizontal"></div>
+                <div className="cross-vertical"></div>
+              </div>
+            </div>
+            <h1 className="brand-title">Hospital System</h1>
+            <p className="brand-subtitle">
+              Plataforma médica integral para pacientes y profesionales de la salud
+            </p>
+            <div className="brand-features">
+              <div className="feature-item">
+                <span className="feature-icon">🏥</span>
+                <span>Gestión hospitalaria completa</span>
+              </div>
+              <div className="feature-item">
+                <span className="feature-icon">👨‍⚕️</span>
+                <span>Para médicos y pacientes</span>
+              </div>
+              <div className="feature-item">
+                <span className="feature-icon">📱</span>
+                <span>Acceso desde cualquier dispositivo</span>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {error && (
-          <div className="alert alert-error">
-            {error}
-          </div>
-        )}
+        {/* Right side - Login Form */}
+        <div className="auth-form-section">
+          <div className="auth-form-container">
+            <div className="form-header">
+              <h2 className="form-title">Iniciar Sesión</h2>
+              <p className="form-subtitle">Accede a tu cuenta</p>
+            </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label className="form-label">Usuario</label>
-            <input
-              type="text"
-              value={formData.usuario_nombre}
-              onChange={(e) => setFormData({...formData, usuario_nombre: e.target.value})}
-              className="form-input"
-              required
-            />
-          </div>
+            {error && (
+              <div className="modern-alert modern-alert-error">
+                <span className="alert-icon">⚠️</span>
+                <span>{error}</span>
+              </div>
+            )}
 
-          <div className="form-group">
-            <label className="form-label">Contraseña</label>
-            <input
-              type="password"
-              value={formData.contrasena}
-              onChange={(e) => setFormData({...formData, contrasena: e.target.value})}
-              className="form-input"
-              required
-            />
-          </div>
+            <form onSubmit={handleSubmit} className="modern-form">
+              <div className="form-group-modern">
+                <label className="form-label-modern">Usuario</label>
+                <div className="input-container">
+                  <span className="input-icon">👤</span>
+                  <input
+                    type="text"
+                    value={formData.usuario_nombre}
+                    onChange={(e) => setFormData({...formData, usuario_nombre: e.target.value})}
+                    className="form-input-modern"
+                    placeholder="Ingresa tu usuario"
+                    required
+                  />
+                </div>
+              </div>
 
-          <button
-            type="submit"
-            className="btn btn-primary btn-lg"
-            style={{ width: '100%' }}
-            disabled={loading}
-          >
-            {loading ? 'Iniciando...' : 'Iniciar Sesión'}
-          </button>
-          <div className="text-center mt-3">
-            <a href="/register" className="link">¿No tienes cuenta? Regístrate</a>
-          </div>
-        </form>
+              <div className="form-group-modern">
+                <label className="form-label-modern">Contraseña</label>
+                <div className="input-container">
+                  <span className="input-icon">🔒</span>
+                  <input
+                    type="password"
+                    value={formData.contrasena}
+                    onChange={(e) => setFormData({...formData, contrasena: e.target.value})}
+                    className="form-input-modern"
+                    placeholder="Ingresa tu contraseña"
+                    required
+                  />
+                </div>
+              </div>
 
-        <div style={{ marginTop: '1rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-          <button className="btn btn-outline btn-sm" onClick={() => fillTestData('paciente')}>
-            👤 Paciente
-          </button>
-          <button className="btn btn-outline btn-sm" onClick={() => fillTestData('medico')}>
-            👨‍⚕️ Médico
-          </button>
+              <button
+                type="submit"
+                className="btn-modern btn-modern-primary"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <span className="loading-spinner"></span>
+                    Iniciando...
+                  </>
+                ) : (
+                  <>
+                    <span>Iniciar Sesión</span>
+                    <span className="btn-arrow">→</span>
+                  </>
+                )}
+              </button>
+
+              <div className="form-divider">
+                <span>o accede como</span>
+              </div>
+
+              {/* Test user buttons */}
+              <div className="test-users-grid">
+                <button 
+                  type="button"
+                  className="test-user-btn"
+                  onClick={() => fillTestData('paciente')}
+                >
+                  <span className="test-user-icon">👤</span>
+                  <span>Paciente</span>
+                </button>
+                <button 
+                  type="button"
+                  className="test-user-btn"
+                  onClick={() => fillTestData('medico')}
+                >
+                  <span className="test-user-icon">👨‍⚕️</span>
+                  <span>Médico</span>
+                </button>
+                <button 
+                  type="button"
+                  className="test-user-btn"
+                  onClick={() => fillTestData('recepcionista')}
+                >
+                  <span className="test-user-icon">👩‍💼</span>
+                  <span>Recepcionista</span>
+                </button>
+                <button 
+                  type="button"
+                  className="test-user-btn"
+                  onClick={() => fillTestData('farmaceutico')}
+                >
+                  <span className="test-user-icon">💊</span>
+                  <span>Farmacéutico</span>
+                </button>
+              </div>
+
+              <div className="form-footer">
+                <p>¿No tienes cuenta? 
+                  <a href="/register" className="link-modern">Regístrate aquí</a>
+                </p>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
     </div>

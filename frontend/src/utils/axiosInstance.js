@@ -1,7 +1,8 @@
 // src/utils/axiosInstance.js
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
+// 🔧 CORREGIDO: Cambiado de puerto 5001 a 5000
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -20,6 +21,10 @@ api.interceptors.request.use(
     } else {
       console.warn('⚠️ No se encontró token en localStorage');
     }
+    
+    // 🐛 DEBUG: Log de la URL completa que se está llamando
+    console.log('📡 Llamando a:', config.baseURL + config.url);
+    
     return config;
   },
   (error) => {
@@ -31,10 +36,15 @@ api.interceptors.request.use(
 // Interceptor de respuesta: log de éxito o errores
 api.interceptors.response.use(
   (response) => {
+    console.log('✅ Respuesta exitosa:', response.status);
     return response;
   },
   (error) => {
-    console.error('🚨 Error en respuesta:', error);
+    console.error('🚨 Error en respuesta:', {
+      status: error.response?.status,
+      message: error.response?.data?.message || error.message,
+      url: error.config?.url
+    });
     return Promise.reject(error);
   }
 );

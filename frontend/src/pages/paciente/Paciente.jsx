@@ -1,3 +1,5 @@
+// frontend/src/pages/paciente/PerfilPaciente.jsx
+
 import React, { useState, useEffect } from 'react';
 import api from '../../utils/axiosInstance';
 
@@ -9,7 +11,7 @@ const PacientePerfil = () => {
   useEffect(() => {
     const fetchPerfil = async () => {
       try {
-        const response = await api.get('/pacientes/perfil');
+        const response = await api.get('/paciente/perfil');
         setPerfil(response.data);
         setError(null);
       } catch (err) {
@@ -44,9 +46,9 @@ const PacientePerfil = () => {
   }
 
   return (
-    <div className="max-w-3xl mx-auto bg-white shadow-md p-6 rounded-lg mt-8">
-      <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-        <span className="text-blue-600 text-3xl">👤</span> Mi Perfil
+    <div className="perfil-container">
+      <h2>
+        <span className="text-3xl mr-2">👤</span> Mi Perfil
       </h2>
 
       {error && (
@@ -55,8 +57,7 @@ const PacientePerfil = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
+      <div className="perfil-grid">
         <Field
           label="Nombre de usuario"
           name="usuario_nombre"
@@ -64,7 +65,7 @@ const PacientePerfil = () => {
           editable={modoEdicion}
           onChange={handleChange}
         />
-        
+
         <Field label="CURP" value={perfil.CURP} readOnly />
 
         <Field
@@ -74,7 +75,6 @@ const PacientePerfil = () => {
           editable={modoEdicion}
           onChange={handleChange}
         />
-
 
         <Field
           label="Nombre"
@@ -120,18 +120,12 @@ const PacientePerfil = () => {
 
       <div className="mt-6 text-right">
         {modoEdicion ? (
-          <button
-            onClick={handleGuardar}
-            className="btn btn-outline btn-primary"
-          >
+          <button onClick={handleGuardar} className="btn-guardar">
             💾 Guardar
           </button>
         ) : (
-          <button
-            onClick={() => setModoEdicion(true)}
-            className="btn btn-outline  btn-secondary"
-          >
-            ✏️ Editar
+          <button onClick={() => setModoEdicion(true)} className="btn-editar">
+            ✏️ Editar perfil
           </button>
         )}
       </div>
@@ -139,16 +133,23 @@ const PacientePerfil = () => {
   );
 };
 
-const Field = ({ label, value, name, editable = false, onChange, readOnly = false, type = 'text' }) => (
+const Field = ({
+  label,
+  value,
+  name,
+  editable = false,
+  onChange,
+  readOnly = false,
+  type = 'text',
+}) => (
   <div>
-    <label className="font-bold block mb-1">{label}</label>
+    <label>{label}</label>
     {editable ? (
       <input
         type={type}
         name={name}
         value={value || ''}
         onChange={onChange}
-        className="w-full border px-3 py-2 rounded-md"
       />
     ) : (
       <input
@@ -157,7 +158,6 @@ const Field = ({ label, value, name, editable = false, onChange, readOnly = fals
         value={value || ''}
         readOnly
         disabled={readOnly}
-        className="w-full bg-gray-100 border px-3 py-2 rounded-md text-gray-700"
       />
     )}
   </div>

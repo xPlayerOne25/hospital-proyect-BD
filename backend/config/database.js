@@ -1,3 +1,4 @@
+//config/database.js
 const sql = require('mssql');
 
 // Configuración de la conexión a SQL Server
