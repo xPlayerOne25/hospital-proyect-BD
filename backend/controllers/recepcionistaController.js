@@ -79,6 +79,324 @@ const crearPaciente = async (req, res) => {
   }
 };
 
+const obtenerMedicamentosDisponibles = async (req, res) => {
+  try {
+    console.log('💊 [obtenerMedicamentosDisponibles] Obteniendo medicamentos disponibles...');
+    
+    const result = await executeStoredProcedure('sp_obtenerMedicamentosDisponibles');
+    
+    const medicamentos = result.recordset || [];
+    
+    console.log(`✅ [obtenerMedicamentosDisponibles] ${medicamentos.length} medicamentos obtenidos`);
+    
+    res.json({
+      success: true,
+      data: medicamentos,
+      total: medicamentos.length
+    });
+
+  } catch (error) {
+    console.error('❌ [obtenerMedicamentosDisponibles] Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener medicamentos disponibles',
+      error: error.message
+    });
+  }
+};
+
+const agregarMedicamentoCita = async (req, res) => {
+  const { folio_cita } = req.params;
+  const { id_medicamento, cantidad, usuario_responsable } = req.body;
+
+  // Validaciones
+  if (!folio_cita || !id_medicamento || !cantidad) {
+    return res.status(400).json({
+      success: false,
+      message: 'Folio de cita, ID de medicamento y cantidad son obligatorios'
+    });
+  }
+
+  if (cantidad <= 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'La cantidad debe ser mayor a 0'
+    });
+  }
+
+  try {
+    console.log(`💊 [agregarMedicamentoCita] Agregando medicamento ${id_medicamento} (cantidad: ${cantidad}) a cita ${folio_cita}`);
+    
+    const result = await executeStoredProcedure('sp_agregarMedicamentoCita', {
+      folio_cita: parseInt(folio_cita),
+      id_medicamento: parseInt(id_medicamento),
+      cantidad: parseInt(cantidad),
+      usuario_responsable: usuario_responsable || 'Recepcionista'
+    });
+
+    const medicamentoAgregado = result.recordset[0];
+    
+    console.log('✅ [agregarMedicamentoCita] Medicamento agregado exitosamente');
+    
+    res.json({
+      success: true,
+      message: 'Medicamento agregado exitosamente',
+      data: medicamentoAgregado
+    });
+
+  } catch (error) {
+    console.error('❌ [agregarMedicamentoCita] Error:', error);
+    
+    let statusCode = 500;
+    let mensaje = 'Error interno del servidor';
+    
+    if (error.message.includes('no existe')) {
+      statusCode = 404;
+      mensaje = 'Cita o medicamento no encontrado';
+    } else if (error.message.includes('Stock insuficiente')) {
+      statusCode = 400;
+      mensaje = error.message;
+    }
+    
+    res.status(statusCode).json({
+      success: false,
+      message: mensaje,
+      error: error.message
+    });
+  }
+};
+
+const quitarMedicamentoCita = async (req, res) => {
+  const { folio_cita, id_medicamento } = req.params;
+  const { cantidad, usuario_responsable } = req.body;
+
+  if (!folio_cita || !id_medicamento) {
+    return res.status(400).json({
+      success: false,
+      message: 'Folio de cita e ID de medicamento son obligatorios'
+    });
+  }
+
+  try {
+    console.log(`🗑️ [quitarMedicamentoCita] Quitando medicamento ${id_medicamento} de cita ${folio_cita}`);
+    
+    const result = await executeStoredProcedure('sp_quitarMedicamentoCita', {
+      folio_cita: parseInt(folio_cita),
+      id_medicamento: parseInt(id_medicamento),
+      cantidad: cantidad ? parseInt(cantidad) : null,
+      usuario_responsable: usuario_responsable || 'Recepcionista'
+    });
+
+    console.log('✅ [quitarMedicamentoCita] Medicamento removido exitosamente');
+    
+    res.json({
+      success: true,
+      message: 'Medicamento removido exitosamente'
+    });
+
+  } catch (error) {
+    console.error('❌ [quitarMedicamentoCita] Error:', error);
+    
+    let statusCode = 500;
+    let mensaje = 'Error interno del servidor';
+    
+    if (error.message.includes('no está asignado')) {
+      statusCode = 404;
+      mensaje = 'El medicamento no está asignado a esta cita';
+    } else if (error.message.includes('No se puede quitar más cantidad')) {
+      statusCode = 400;
+      mensaje = error.message;
+    }
+    
+    res.status(statusCode).json({
+      success: false,
+      message: mensaje,
+      error: error.message
+    });
+  }
+};
+
+const obtenerMedicamentosCita = async (req, res) => {
+  const { folio_cita } = req.params;
+
+  if (!folio_cita) {
+    return res.status(400).json({
+      success: false,
+      message: 'Folio de cita es obligatorio'
+    });
+  }
+
+  try {
+    console.log(`📋 [obtenerMedicamentosCita] Obteniendo medicamentos de cita ${folio_cita}`);
+    
+    const result = await executeStoredProcedure('sp_obtenerMedicamentosCita', {
+      folio_cita: parseInt(folio_cita)
+    });
+
+    const medicamentos = result.recordset || [];
+    
+    console.log(`✅ [obtenerMedicamentosCita] ${medicamentos.length} medicamentos obtenidos`);
+    
+    res.json({
+      success: true,
+      data: medicamentos,
+      total: medicamentos.length
+    });
+
+  } catch (error) {
+    console.error('❌ [obtenerMedicamentosCita] Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener medicamentos de la cita',
+      error: error.message,
+      data: []
+    });
+  }
+};
+
+const generarTicketConMedicamentos = async (req, res) => {
+  const { folio_cita } = req.params;
+
+  if (!folio_cita) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'Folio de la cita es obligatorio' 
+    });
+  }
+
+  const folioNum = parseInt(folio_cita);
+  if (isNaN(folioNum)) {
+    return res.status(400).json({
+      success: false,
+      message: 'El folio debe ser un número válido'
+    });
+  }
+
+  try {
+    console.log(`🧾 [generarTicketConMedicamentos] Generando ticket con medicamentos para folio: ${folioNum}`);
+
+    // Usar el SP actualizado que incluye medicamentos
+    const result = await executeStoredProcedure('sp_generarTicketPagoConMedicamentos', { 
+      folio_cita: folioNum 
+    });
+    
+    if (!result.recordset || result.recordset.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'No se encontró información para generar el ticket' 
+      });
+    }
+
+    const ticket = result.recordset[0];
+    
+    // Calcular el total final
+    const costoEspecialidad = parseFloat(ticket.costo_especialidad) || 0;
+    const totalServicios = parseFloat(ticket.total_servicios) || 0;
+    const totalMedicamentos = parseFloat(ticket.total_medicamentos) || 0;
+    
+    ticket.total = costoEspecialidad + totalServicios + totalMedicamentos;
+
+    // Agregar información adicional del ticket
+    ticket.fecha_emision = new Date().toISOString();
+    ticket.numero_ticket = `TCK-${folioNum}-${Date.now().toString().slice(-6)}`;
+
+    // Formatear valores monetarios
+    ticket.costo_especialidad = costoEspecialidad;
+    ticket.total_servicios = totalServicios;
+    ticket.total_medicamentos = totalMedicamentos;
+
+    console.log(`✅ [generarTicketConMedicamentos] Ticket generado exitosamente:`, {
+      folio: folioNum,
+      paciente: ticket.nombre_paciente,
+      total: ticket.total.toFixed(2),
+      medicamentos: totalMedicamentos.toFixed(2)
+    });
+
+    res.json({ 
+      success: true, 
+      data: ticket,
+      message: 'Ticket generado correctamente'
+    });
+
+  } catch (error) {
+    console.error('❌ [generarTicketConMedicamentos] Error:', error);
+    
+    let mensajeError = 'Error interno del servidor';
+    
+    if (error.message.includes('no existe')) {
+      mensajeError = 'La cita especificada no existe';
+    } else {
+      mensajeError = error.message;
+    }
+    
+    res.status(500).json({ 
+      success: false, 
+      message: mensajeError,
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+const obtenerDetallesTicketConMedicamentos = async (req, res) => {
+  const { folio_cita } = req.params;
+
+  const folioNum = parseInt(folio_cita);
+  if (isNaN(folioNum)) {
+    return res.status(400).json({
+      success: false,
+      message: 'El folio debe ser un número válido'
+    });
+  }
+
+  try {
+    console.log(`📋 [obtenerDetallesTicketConMedicamentos] Obteniendo detalles para folio: ${folioNum}`);
+
+    // Obtener medicamentos reales de la cita
+    const medicamentosResult = await executeStoredProcedure('sp_obtenerMedicamentosCita', { 
+      folio_cita: folioNum 
+    });
+
+    const medicamentos = medicamentosResult.recordset || [];
+
+    // Formatear los datos
+    const medicamentosFormateados = medicamentos.map(medicamento => ({
+      ...medicamento,
+      precio_unitario: parseFloat(medicamento.precio_unitario || 0),
+      cantidad: parseInt(medicamento.cantidad || 0),
+      subtotal: parseFloat(medicamento.subtotal || 0)
+    }));
+
+    console.log(`✅ [obtenerDetallesTicketConMedicamentos] ${medicamentos.length} medicamentos obtenidos`);
+
+    res.json({
+      success: true,
+      data: {
+        servicios: [], // Tu esquema no tiene servicios
+        medicamentos: medicamentosFormateados,
+        resumen: {
+          total_servicios: 0,
+          total_medicamentos: medicamentos.length,
+          monto_servicios: 0,
+          monto_medicamentos: medicamentosFormateados.reduce((sum, m) => sum + m.subtotal, 0)
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ [obtenerDetallesTicketConMedicamentos] Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener detalles del ticket',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      data: {
+        servicios: [],
+        medicamentos: []
+      }
+    });
+  }
+};
+
+
 // ===============================
 // GESTIÓN DE DOCTORES
 // ===============================
@@ -307,24 +625,186 @@ const generarTicket = async (req, res) => {
   const { folio_cita } = req.params;
 
   if (!folio_cita) {
-    return res.status(400).json({ success: false, message: 'Folio de la cita es obligatorio' });
+    return res.status(400).json({ 
+      success: false, 
+      message: 'Folio de la cita es obligatorio' 
+    });
+  }
+
+  // Validar que el folio sea un número
+  const folioNum = parseInt(folio_cita);
+  if (isNaN(folioNum)) {
+    return res.status(400).json({
+      success: false,
+      message: 'El folio debe ser un número válido'
+    });
   }
 
   try {
-    const result = await executeStoredProcedure('sp_generarTicketPago', { folio_cita });
-    if (!result.recordset.length) {
-      return res.status(404).json({ success: false, message: 'No se encontró información para generar el ticket' });
+    console.log(`🧾 [generarTicket] Generando ticket para folio: ${folioNum}`);
+
+    // Ejecutar el stored procedure
+    const result = await executeStoredProcedure('sp_generarTicketPago', { 
+      folio_cita: folioNum 
+    });
+    
+    if (!result.recordset || result.recordset.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'No se encontró información para generar el ticket' 
+      });
     }
 
     const ticket = result.recordset[0];
-    ticket.total =
-      (parseFloat(ticket.costo_especialidad) || 0) +
-      (parseFloat(ticket.total_servicios) || 0) +
-      (parseFloat(ticket.total_medicamentos) || 0);
+    
+    // Asegurar que todos los valores estén formateados correctamente
+    const ticketFormateado = {
+      // Información básica
+      folio_cita: ticket.folio_cita,
+      fecha_hora: ticket.fecha_hora,
+      fecha_hora_formatted: ticket.fecha_hora_formatted,
+      fecha_emision: ticket.fecha_emision,
+      
+      // Información del paciente
+      curp_paciente: ticket.curp_paciente,
+      nombre_paciente: ticket.nombre_paciente,
+      telefono_paciente: ticket.telefono_paciente,
+      edad_paciente: ticket.edad_paciente,
+      
+      // Información del médico
+      cedula_medico: ticket.cedula_medico,
+      nombre_medico: ticket.nombre_medico,
+      correo_medico: ticket.correo_medico,
+      
+      // Información de la consulta
+      id_especialidad: ticket.id_especialidad,
+      nombre_especialidad: ticket.nombre_especialidad,
+      consultorio_numero: ticket.consultorio_numero,
+      
+      // Información del estatus
+      estatus_cita: ticket.estatus_cita,
+      descripcion_estatus: ticket.descripcion_estatus,
+      
+      // Montos (formateados a 2 decimales)
+      costo_especialidad: parseFloat(ticket.costo_especialidad || 0),
+      total_consulta: parseFloat(ticket.total_consulta || 0),
+      total_servicios: parseFloat(ticket.total_servicios || 0),
+      total_medicamentos: parseFloat(ticket.total_medicamentos || 0),
+      total: parseFloat(ticket.total_general || ticket.costo_especialidad || 0),
+      
+      // Información adicional del ticket
+      numero_ticket: `TCK-${folioNum}-${Date.now().toString().slice(-6)}`,
+      fecha_emision_local: new Date().toLocaleString('es-MX')
+    };
 
-    res.json({ success: true, data: ticket });
+    console.log(`✅ [generarTicket] Ticket generado exitosamente:`, {
+      folio: folioNum,
+      paciente: ticketFormateado.nombre_paciente,
+      total: ticketFormateado.total.toFixed(2)
+    });
+
+    res.json({ 
+      success: true, 
+      data: ticketFormateado,
+      message: 'Ticket generado correctamente'
+    });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Error al generar ticket', error: error.message });
+    console.error('❌ [generarTicket] Error:', error);
+    
+    // Manejar errores específicos
+    let mensajeError = 'Error interno del servidor';
+    
+    if (error.message.includes('no existe')) {
+      mensajeError = 'La cita especificada no existe';
+    } else if (error.message.includes('Invalid object name')) {
+      mensajeError = 'Error de configuración de base de datos';
+    } else {
+      mensajeError = error.message;
+    }
+    
+    res.status(500).json({ 
+      success: false, 
+      message: mensajeError,
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Función simplificada para obtener detalles (ya que no hay servicios ni medicamentos adicionales)
+const obtenerDetallesTicket = async (req, res) => {
+  const { folio_cita } = req.params;
+
+  // Validar folio
+  const folioNum = parseInt(folio_cita);
+  if (isNaN(folioNum)) {
+    return res.status(400).json({
+      success: false,
+      message: 'El folio debe ser un número válido'
+    });
+  }
+
+  try {
+    console.log(`📋 [obtenerDetallesTicket] Obteniendo información básica para folio: ${folioNum}`);
+
+    // Como no hay servicios ni medicamentos adicionales, solo devolvemos estructura vacía
+    // pero consistente con el frontend
+    const result = await executeStoredProcedure('sp_obtenerInfoBasicaTicket', { 
+      folio_cita: folioNum 
+    });
+
+    if (!result.recordset || result.recordset.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No se encontró información para la cita especificada'
+      });
+    }
+
+    const info = result.recordset[0];
+
+    res.json({
+      success: true,
+      data: {
+        servicios: [], // Vacío porque no existen en tu esquema
+        medicamentos: [], // Vacío porque no existen en tu esquema
+        resumen: {
+          total_servicios: 0,
+          total_medicamentos: 0,
+          monto_servicios: 0,
+          monto_medicamentos: 0,
+          monto_consulta: parseFloat(info.costo_especialidad || 0),
+          total_general: parseFloat(info.costo_especialidad || 0)
+        },
+        info_basica: {
+          folio_cita: info.folio_cita,
+          paciente: info.paciente_completo,
+          especialidad: info.nombre_especialidad,
+          medico: info.medico_nombre,
+          consultorio: info.consultorio_numero,
+          estatus: info.estatusCita
+        }
+      },
+      message: 'Información obtenida correctamente'
+    });
+
+  } catch (error) {
+    console.error('❌ [obtenerDetallesTicket] Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener información del ticket',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      // Devolver estructura vacía para que el frontend no falle
+      data: {
+        servicios: [],
+        medicamentos: [],
+        resumen: {
+          total_servicios: 0,
+          total_medicamentos: 0,
+          monto_servicios: 0,
+          monto_medicamentos: 0
+        }
+      }
+    });
   }
 };
 
@@ -1043,10 +1523,16 @@ module.exports = {
   obtenerConsultorios,
   crearUsuarioDoctor,
   obtenerEstadisticas,
-
+  obtenerDetallesTicket,
   obtenerEstatusCita,
   actualizarEstatusCita,
   obtenerHistorialCita,
   procesarCitasPasadas,
-  obtenerEstadisticasCitas
+  obtenerEstadisticasCitas,
+  obtenerMedicamentosDisponibles,
+  agregarMedicamentoCita,
+  quitarMedicamentoCita,
+  obtenerMedicamentosCita,
+  generarTicketConMedicamentos,
+  obtenerDetallesTicketConMedicamentos,
 };

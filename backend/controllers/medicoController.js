@@ -377,6 +377,8 @@ const atenderCitaCompleta = async (req, res) => {
 const obtenerDatosPaciente = async (req, res) => {
   const { curp } = req.params;
 
+  console.log(`👤 [obtenerDatosPaciente] CURP recibido: "${curp}"`);
+
   if (!curp) {
     return res.status(400).json({ 
       success: false, 
@@ -385,26 +387,184 @@ const obtenerDatosPaciente = async (req, res) => {
   }
 
   try {
-    console.log(`👤 Obteniendo datos del paciente: ${curp}`);
+    console.log(`🔄 [obtenerDatosPaciente] Ejecutando SP con parámetro: paciente_curp = "${curp}"`);
     
-    const result = await executeStoredProcedure('sp_obtenerDatosPacienteMedico', { curp });
+    const result = await executeStoredProcedure('sp_obtenerDatosPacienteMedico', { 
+      paciente_curp: curp
+    });
     
-    if (!result.recordset.length) {
+    console.log(`📋 [obtenerDatosPaciente] Resultado del SP:`, result);
+    
+    if (!result.recordset || result.recordset.length === 0) {
+      console.log(`❌ [obtenerDatosPaciente] No se encontraron datos para CURP: ${curp}`);
       return res.status(404).json({ 
         success: false, 
         message: 'Paciente no encontrado' 
       });
     }
 
-    console.log(`✅ Datos del paciente ${curp} obtenidos correctamente`);
-    res.json({ success: true, data: result.recordset[0] });
+    const paciente = result.recordset[0];
+    console.log(`✅ [obtenerDatosPaciente] Datos del paciente ${curp} obtenidos correctamente`);
+    
+    res.json({ 
+      success: true, 
+      data: paciente 
+    });
+
   } catch (error) {
-    console.error('❌ Error al obtener datos del paciente:', error);
+    console.error('❌ [obtenerDatosPaciente] Error ejecutando stored procedure:', error);
+    
+    // Fallback: Intentar con query directa
+    try {
+      console.log(`🔄 [obtenerDatosPaciente] Fallback: usando query directa para CURP: ${curp}`);
+      
+      const curpEscapado = curp.replace(/'/g, "''");
+      const queryDirecta = `
+        SELECT 
+          p.CURP,
+          p.pac_nombre,
+          p.pac_paterno,
+          p.pac_materno,
+          p.pac_edad,
+          p.pac_tel,
+          p.pac_fechaNacimiento,
+          'No registrado' as tipo_sangre,
+          'No registradas' as alergias,
+          'Ninguno registrado' as padecimientos_previos,
+          (SELECT COUNT(*) FROM CITA WHERE fk_cita_CURP = p.CURP) as total_citas,
+          (SELECT COUNT(*) 
+           FROM RECETA r 
+           INNER JOIN CITA c ON r.fk_folio_cita = c.folio_cita 
+           WHERE c.fk_cita_CURP = p.CURP) as total_recetas,
+          (SELECT TOP 1 cita_fechahora 
+           FROM CITA 
+           WHERE fk_cita_CURP = p.CURP 
+           ORDER BY cita_fechahora DESC) as ultima_cita
+        FROM PACIENTE p
+        WHERE p.CURP = '${curpEscapado}'
+      `;
+      
+      const result = await executeQuery(queryDirecta);
+      const pacienteData = result.recordset || result;
+      
+      if (!pacienteData || pacienteData.length === 0) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'Paciente no encontrado' 
+        });
+      }
+
+      console.log(`✅ [obtenerDatosPaciente] Fallback exitoso para CURP: ${curp}`);
+      res.json({ 
+        success: true, 
+        data: pacienteData[0] 
+      });
+
+    } catch (fallbackError) {
+      console.error('❌ [obtenerDatosPaciente] Error en fallback:', fallbackError);
+      res.status(500).json({ 
+        success: false, 
+        message: 'Error al obtener datos del paciente',
+        error: error.message 
+      });
+    }
+  }
+};
+
+// Función para obtener pacientes del médico
+const obtenerPacientesMedico = async (req, res) => {
+  const { cedula } = req.params;
+
+  console.log(`👥 [obtenerPacientesMedico] Obteniendo pacientes para médico: ${cedula}`);
+
+  if (!cedula) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'Cédula del médico es obligatoria' 
+    });
+  }
+
+  try {
+    console.log(`🔄 [obtenerPacientesMedico] Ejecutando SP para médico: ${cedula}`);
+    
+    const result = await executeStoredProcedure('sp_obtenerPacientesMedico', { 
+      medico_cedula: cedula 
+    });
+
+    const pacientes = result.recordset || [];
+    console.log(`✅ [obtenerPacientesMedico] Pacientes obtenidos:`, pacientes.length);
+    
+    // Formatear datos para el frontend
+    const pacientesFormateados = pacientes.map(paciente => ({
+      ...paciente,
+      ultima_cita_formateada: paciente.ultima_cita ? 
+        new Date(paciente.ultima_cita).toLocaleDateString('es-MX') : 
+        'Sin citas',
+      edad_calculada: paciente.pac_edad || 
+        (paciente.pac_fechanacimiento ? 
+          Math.floor((Date.now() - new Date(paciente.pac_fechanacimiento)) / (365.25 * 24 * 60 * 60 * 1000)) : 
+          'No disponible')
+    }));
+
+    res.json({ 
+      success: true, 
+      data: pacientesFormateados,
+      total: pacientesFormateados.length
+    });
+
+  } catch (error) {
+    console.error('❌ [obtenerPacientesMedico] Error:', error);
     res.status(500).json({ 
       success: false, 
-      message: 'Error al obtener datos del paciente',
-      error: error.message 
+      message: 'Error al obtener pacientes del médico',
+      error: error.message,
+      data: []
     });
+  }
+};
+
+
+
+// Funciones auxiliares para iconos y colores
+function obtenerIconoTipoMovimiento(tipo) {
+  const tipos = {
+    'consulta': 'fa-stethoscope',
+    'diagnóstico': 'fa-file-medical',
+    'receta': 'fa-prescription-bottle-alt',
+    'procedimiento': 'fa-procedures',
+    'laboratorio': 'fa-microscope',
+    'hospitalización': 'fa-hospital'
+  };
+  return tipos[tipo.toLowerCase()] || 'fa-file-medical';
+}
+
+function obtenerColorTipoMovimiento(tipo) {
+  const colores = {
+    'consulta': 'primary',
+    'diagnóstico': 'info',
+    'receta': 'success',
+    'procedimiento': 'warning',
+    'laboratorio': 'danger',
+    'hospitalización': 'secondary'
+  };
+  return colores[tipo.toLowerCase()] || 'info';
+}
+
+const getPacientePorCURP = async (req, res) => {
+  const { curp } = req.params;
+  try {
+    const result = await pool.request()
+      .input('curp', sql.VarChar(18), curp)
+      .execute('sp_obtenerPacientePorCURP');
+
+    if (result.recordset.length === 0) {
+      return res.status(404).json({ mensaje: 'Paciente no encontrado' });
+    }
+
+    res.json(result.recordset[0]);
+  } catch (err) {
+    console.error('Error al obtener paciente por CURP:', err);
+    res.status(500).json({ mensaje: 'Error interno del servidor' });
   }
 };
 
@@ -527,7 +687,7 @@ const obtenerHistorialPorMedico = async (req, res) => {
 // GESTIÓN DE RECETAS
 // ===============================
 
-// Obtener recetas del médico - FUNCIÓN CORREGIDA
+// Obtener recetas del médico
 const obtenerRecetasMedico = async (req, res) => {
   const { cedula } = req.params;
   const { fecha_inicio, fecha_fin, paciente_curp } = req.query;
@@ -542,7 +702,6 @@ const obtenerRecetasMedico = async (req, res) => {
   try {
     console.log(`💊 [obtenerRecetasMedico] Obteniendo recetas del médico: ${cedula}`);
     
-    // ✅ USAR QUERY DIRECTA SIEMPRE (más confiable)
     const cedulaEscapada = cedula.replace(/'/g, "''");
     
     let queryDirecta = `
@@ -594,7 +753,7 @@ const obtenerRecetasMedico = async (req, res) => {
     const directResult = await executeQuery(queryDirecta);
     console.log(`🔍 [obtenerRecetasMedico] Resultado crudo:`, directResult);
     
-    // ✅ NORMALIZAR RESULTADO CORRECTAMENTE
+    // Normalizar resultado
     let recetasArray = [];
     
     if (Array.isArray(directResult)) {
@@ -604,13 +763,12 @@ const obtenerRecetasMedico = async (req, res) => {
     } else if (directResult && directResult.rows && Array.isArray(directResult.rows)) {
       recetasArray = directResult.rows;
     } else if (directResult && typeof directResult === 'object') {
-      // Si es un objeto simple, convertirlo en array
       recetasArray = [directResult];
     }
     
     console.log(`✅ [obtenerRecetasMedico] Recetas normalizadas - Total: ${recetasArray.length}`);
     
-    // ✅ PROCESAR MEDICAMENTOS PARA EL FRONTEND
+    // Procesar medicamentos para el frontend
     const recetasProcesadas = recetasArray.map(receta => ({
       ...receta,
       medicamentos: receta.medicamentos ? 
@@ -630,12 +788,12 @@ const obtenerRecetasMedico = async (req, res) => {
       success: false, 
       message: 'Error al obtener recetas del médico',
       error: error.message,
-      data: [] // ✅ Devolver array vacío en caso de error
+      data: []
     });
   }
 };
 
-// Generar receta médica - FUNCIÓN CORREGIDA
+// Generar receta médica
 const generarReceta = async (req, res) => {
   const {
     folio_cita,
@@ -654,7 +812,6 @@ const generarReceta = async (req, res) => {
     medicamento: medicamento ? medicamento.substring(0, 30) + '...' : 'VACÍO'
   });
 
-  // ✅ VALIDACIÓN MEJORADA
   if (!folio_cita || !tratamiento || !diagnostico || !medicamento || !cedula_medico) {
     console.log('❌ [generarReceta] Faltan campos obligatorios');
     return res.status(400).json({ 
@@ -666,11 +823,9 @@ const generarReceta = async (req, res) => {
   try {
     console.log(`🔍 [generarReceta] Verificando cita ${folio_cita} para médico ${cedula_medico}`);
     
-    // ✅ ESCAPAR PARÁMETROS CORRECTAMENTE
     const folioCitaNum = parseInt(folio_cita);
     const cedulaEscapada = cedula_medico.replace(/'/g, "''");
     
-    // Query para verificar cita específica
     const verificarQuery = `
       SELECT 
         c.folio_cita,
@@ -689,7 +844,6 @@ const generarReceta = async (req, res) => {
     
     const citaResult = await executeQuery(verificarQuery);
     
-    // ✅ NORMALIZAR RESULTADO
     let citaData = [];
     if (Array.isArray(citaResult)) {
       citaData = citaResult;
@@ -701,7 +855,6 @@ const generarReceta = async (req, res) => {
     
     console.log(`🔍 [generarReceta] Cita encontrada:`, citaData);
     
-    // Verificar si se encontró la cita
     if (!citaData || citaData.length === 0) {
       console.log(`❌ [generarReceta] Cita ${folio_cita} no encontrada para médico ${cedula_medico}`);
       return res.status(404).json({
@@ -713,7 +866,6 @@ const generarReceta = async (req, res) => {
     const cita = citaData[0];
     console.log(`✅ [generarReceta] Cita válida encontrada:`, cita);
 
-    // ✅ VERIFICAR SI YA EXISTE UNA RECETA
     const verificarRecetaQuery = `
       SELECT id_receta, diagnostico, tratamiento, medicamento 
       FROM RECETA 
@@ -752,10 +904,8 @@ const generarReceta = async (req, res) => {
       });
     }
 
-    // ✅ CREAR NUEVA RECETA CON LÍMITES DE CARACTERES
     console.log(`🔄 [generarReceta] Creando nueva receta...`);
     
-    // Truncar y escapar campos
     const tratamientoFinal = tratamiento.substring(0, 255);
     const diagnosticoFinal = diagnostico.substring(0, 255);
     const medicamentoFinal = medicamento.substring(0, 500);
@@ -764,7 +914,6 @@ const generarReceta = async (req, res) => {
     const diagnosticoEscapado = diagnosticoFinal.replace(/'/g, "''");
     const medicamentoEscapado = medicamentoFinal.replace(/'/g, "''");
     
-    // ✅ USAR TRANSACCIÓN PARA INSERTAR Y OBTENER ID
     const insertQuery = `
       INSERT INTO RECETA (fk_folio_cita, tratamiento, diagnostico, medicamento)
       VALUES (${folioCitaNum}, '${tratamientoEscapado}', '${diagnosticoEscapado}', '${medicamentoEscapado}');
@@ -777,11 +926,9 @@ const generarReceta = async (req, res) => {
     const insertResult = await executeQuery(insertQuery);
     console.log(`🔍 [generarReceta] Resultado inserción:`, insertResult);
     
-    // ✅ OBTENER ID DE LA RECETA CREADA
     let idReceta = null;
     
     if (Array.isArray(insertResult) && insertResult.length > 0) {
-      // Si es array, tomar el último elemento que debería tener el ID
       const ultimoElemento = insertResult[insertResult.length - 1];
       idReceta = ultimoElemento.id_receta || ultimoElemento[''];
     } else if (insertResult && insertResult.recordset && insertResult.recordset.length > 0) {
@@ -812,7 +959,6 @@ const generarReceta = async (req, res) => {
         }
       });
     } else {
-      // ✅ FALLBACK: Verificar si se insertó correctamente
       console.log(`⚠️ [generarReceta] No se obtuvo ID, verificando inserción...`);
       
       const verificarInsercionQuery = `
@@ -879,7 +1025,6 @@ const obtenerReceta = async (req, res) => {
   try {
     console.log(`🔍 Obteniendo receta: ${id_receta}`);
     
-    // Por ahora devolver receta simulada
     res.json({ 
       success: true, 
       data: {
@@ -915,38 +1060,31 @@ const obtenerEstadisticasMedico = async (req, res) => {
     });
   }
 
-  // Función helper para normalizar resultados
   const normalizarResultado = (result) => {
     console.log('🔧 [normalizarEstadisticas] Resultado crudo:', result);
     
-    // Si ya es un array, devolverlo tal como está
     if (Array.isArray(result)) {
       return result;
     }
     
-    // Si es un objeto con recordset (como SQL Server con mssql)
     if (result && result.recordset && Array.isArray(result.recordset)) {
       return result.recordset;
     }
     
-    // Si es un objeto con rows (como PostgreSQL)
     if (result && result.rows && Array.isArray(result.rows)) {
       return result.rows;
     }
     
-    // Si es un objeto simple, convertirlo en array
     if (result && typeof result === 'object') {
       return [result];
     }
     
-    // Si no se puede normalizar, devolver array vacío
     return [];
   };
 
   try {
     console.log(`🔄 [obtenerEstadisticasMedico] Calculando estadísticas para médico: ${cedula}`);
     
-    // Intentar con SP primero
     try {
       console.log(`🔄 [obtenerEstadisticasMedico] Intentando con SP...`);
       const result = await executeStoredProcedure('sp_obtenerEstadisticasMedico', { cedula });
@@ -962,10 +1100,8 @@ const obtenerEstadisticasMedico = async (req, res) => {
       console.log(`⚠️ [obtenerEstadisticasMedico] SP falló:`, spError.message);
     }
 
-    // Query directa como fallback
     console.log(`🔄 [obtenerEstadisticasMedico] Usando queries directas...`);
     
-    // Query para obtener todas las estadísticas de una vez
     const cedulaEscapada = cedula.replace(/'/g, "''");
     const statsQuery = `
       SELECT 
@@ -998,7 +1134,6 @@ const obtenerEstadisticasMedico = async (req, res) => {
       console.log(`🔍 [obtenerEstadisticasMedico] Estadísticas citas normalizadas:`, estadisticasCitas);
     } catch (statsError) {
       console.error('❌ [obtenerEstadisticasMedico] Error en query de estadísticas:', statsError);
-      // Devolver estadísticas por defecto en caso de error
       estadisticasCitas = [{
         total_citas: 0,
         citas_atendidas: 0,
@@ -1008,7 +1143,6 @@ const obtenerEstadisticasMedico = async (req, res) => {
       }];
     }
 
-    // Query para obtener total de recetas
     let totalRecetas = 0;
     try {
       const recetasQuery = `
@@ -1033,7 +1167,6 @@ const obtenerEstadisticasMedico = async (req, res) => {
       totalRecetas = 0;
     }
 
-    // Combinar resultados
     const estadisticas = estadisticasCitas[0] || {};
     const estadisticasFinales = {
       total_citas: Number(estadisticas.total_citas || 0),
@@ -1043,7 +1176,6 @@ const obtenerEstadisticasMedico = async (req, res) => {
       citas_hoy: Number(estadisticas.citas_hoy || 0),
       total_recetas: Number(totalRecetas),
       
-      // Estadísticas adicionales calculadas
       porcentaje_atendidas: estadisticas.total_citas > 0 
         ? Math.round((Number(estadisticas.citas_atendidas || 0) / Number(estadisticas.total_citas)) * 100)
         : 0,
@@ -1058,7 +1190,6 @@ const obtenerEstadisticasMedico = async (req, res) => {
   } catch (error) {
     console.error('❌ [obtenerEstadisticasMedico] Error general:', error);
     
-    // En caso de error total, devolver estadísticas vacías pero válidas
     const estadisticasVacias = {
       total_citas: 0,
       citas_atendidas: 0,
@@ -1074,7 +1205,7 @@ const obtenerEstadisticasMedico = async (req, res) => {
       success: false, 
       message: 'Error al obtener estadísticas',
       error: error.message,
-      data: estadisticasVacias // Proporcionar datos por defecto
+      data: estadisticasVacias
     });
   }
 };
@@ -1096,11 +1227,14 @@ module.exports = {
   
   // Gestión de Pacientes
   obtenerDatosPaciente,
+  obtenerPacientesMedico,
+  getPacientePorCURP,
   
   // Gestión de Historial Médico
   obtenerHistorialMedico,
   agregarHistorialMedico,
   obtenerHistorialPorMedico,
+
   
   // Gestión de Recetas
   obtenerRecetasMedico,
@@ -1108,5 +1242,7 @@ module.exports = {
   obtenerReceta,
   
   // Estadísticas
-  obtenerEstadisticasMedico
+  obtenerEstadisticasMedico,
+  obtenerIconoTipoMovimiento,
+  obtenerColorTipoMovimiento
 };

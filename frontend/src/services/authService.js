@@ -1,4 +1,4 @@
-// services/authService.js - ARCHIVO COMPLETO
+// services/authService.js - ARCHIVO COMPLETO CORREGIDO
 import axios from 'axios';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
@@ -59,6 +59,8 @@ api.interceptors.response.use(
 // ===== SERVICIO PRINCIPAL =====
 export const authService = {
   
+  
+
   // ===============================
   // AUTENTICACIÓN
   // ===============================
@@ -137,7 +139,7 @@ export const authService = {
   obtenerMedicosPorEspecialidad: async (especialidadId) => {
     try {
       console.log('👨‍⚕️ Obteniendo médicos para especialidad:', especialidadId);
-      const response = await api.get(`/citas/medicos/${especialidadId}`);
+      const response = await api.get(`/pacientes/${especialidadId}`);
       console.log('✅ Médicos obtenidos:', response.data?.length || 0);
       return response;
     } catch (error) {
@@ -409,18 +411,131 @@ export const authService = {
     }
   },
 
-// Crear doctor
-crearDoctor: async (datosDoctor) => {
+  // Crear doctor
+  crearDoctor: async (datosDoctor) => {
+    try {
+      console.log('👨‍⚕️ Creando doctor...');
+      const response = await api.post('/recepcionista/doctores', datosDoctor);
+      console.log('✅ Doctor creado exitosamente');
+      return response;
+    } catch (error) {
+      console.error('❌ Error creando doctor:', error);
+      throw error;
+    }
+  },
+
+  // Crear usuario para doctor existente
+  crearUsuarioDoctor: async (cedula) => {
+    try {
+      console.log('🔐 Creando usuario para doctor:', cedula);
+      const response = await api.post(`/recepcionista/doctores/${cedula}/crear-usuario`);
+      console.log('✅ Usuario creado para doctor');
+      return response;
+    } catch (error) {
+      console.error('❌ Error creando usuario para doctor:', error);
+      throw error;
+    }
+  },
+
+// Función corregida para darBajaDoctor en authService.js
+
+darBajaDoctor: async (cedula) => {
   try {
-    console.log('👨‍⚕️ Creando doctor...');
-    const response = await api.post('/recepcionista/doctores', datosDoctor);
-    console.log('✅ Doctor creado exitosamente');
+    console.log('🗑️ Dando de baja doctor:', cedula);
+    
+    // 🔧 CORREGIDO: Cambiar de PUT a DELETE y usar la ruta correcta
+    const response = await api.delete(`/recepcionista/doctores/${cedula}`);
+    
+    console.log('✅ Doctor dado de baja');
     return response;
   } catch (error) {
-    console.error('❌ Error creando doctor:', error);
+    console.error('❌ Error dando de baja doctor:', error);
+    
+    // Mejor manejo de errores específicos
+    if (error.response) {
+      const { status, data } = error.response;
+      
+      if (status === 400) {
+        throw new Error(data.message || 'El doctor tiene citas pendientes y no puede ser dado de baja');
+      } else if (status === 404) {
+        throw new Error('Doctor no encontrado');
+      } else if (status === 500) {
+        throw new Error(data.message || 'Error interno del servidor');
+      }
+    }
+
+    
+    
     throw error;
   }
 },
+  // ===============================
+  // GESTIÓN DE COBROS Y TICKETS
+  // ===============================
+
+  obtenerCobros: async () => {
+    try {
+      console.log('💳 Obteniendo información de cobros...');
+      const response = await api.get('/recepcionista/cobros');
+      console.log('✅ Cobros obtenidos:', response.data?.length || 0);
+      return response;
+    } catch (error) {
+      console.error('❌ Error obteniendo cobros:', error);
+      throw error;
+    }
+  },
+
+  generarTicket: async (folioCita) => {
+    try {
+      console.log('🧾 Generando ticket para folio:', folioCita);
+      const response = await api.get(`/recepcionista/ticket/${folioCita}`);
+      console.log('✅ Ticket generado exitosamente');
+      return response;
+    } catch (error) {
+      console.error('❌ Error generando ticket:', error);
+      throw error;
+    }
+  },
+
+  obtenerDetallesTicket: async (folioCita) => {
+    try {
+      console.log('📋 Obteniendo detalles del ticket para folio:', folioCita);
+      const response = await api.get(`/recepcionista/ticket/${folioCita}/detalles`);
+      console.log('✅ Detalles del ticket obtenidos');
+      return response;
+    } catch (error) {
+      console.error('❌ Error obteniendo detalles del ticket:', error);
+      throw error;
+    }
+  },
+
+  obtenerTicketCompleto: async (folioCita) => {
+    try {
+      console.log('🧾 Obteniendo ticket completo para folio:', folioCita);
+      
+      // Obtener tanto el ticket como los detalles
+      const [ticketResponse, detallesResponse] = await Promise.all([
+        api.get(`/recepcionista/ticket/${folioCita}`),
+        api.get(`/recepcionista/ticket/${folioCita}/detalles`).catch(() => ({ 
+          data: { success: true, data: { servicios: [], medicamentos: [] } } 
+        }))
+      ]);
+
+      if (ticketResponse.success) {
+        console.log('✅ Ticket completo obtenido');
+        return {
+          success: true,
+          ticket: ticketResponse.data,
+          detalles: detallesResponse.data?.data || { servicios: [], medicamentos: [] }
+        };
+      } else {
+        throw new Error(ticketResponse.message || 'Error obteniendo ticket');
+      }
+    } catch (error) {
+      console.error('❌ Error obteniendo ticket completo:', error);
+      throw error;
+    }
+  },
 
   // ===============================
   // CATÁLOGOS
@@ -450,9 +565,276 @@ crearDoctor: async (datosDoctor) => {
     }
   },
 
+  obtenerEstadisticasGeneral: async () => {
+    try {
+      console.log('📊 Obteniendo estadísticas generales...');
+      const response = await api.get('/recepcionista/estadisticas');
+      console.log('✅ Estadísticas generales obtenidas');
+      return response;
+    } catch (error) {
+      console.error('❌ Error obteniendo estadísticas generales:', error);
+      throw error;
+    }
+  },
+
   // ===============================
   // FUNCIONES HELPER
   // ===============================
+
+  // Función helper para formatear montos monetarios
+  formatearMonto: (monto) => {
+    if (typeof monto !== 'number') {
+      monto = parseFloat(monto) || 0;
+    }
+    return new Intl.NumberFormat('es-MX', {
+      style: 'currency',
+      currency: 'MXN',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(monto);
+  },
+
+  // Función helper para generar número de ticket
+  generarNumeroTicket: (folio) => {
+    const timestamp = Date.now().toString().slice(-6);
+    return `TCK-${folio}-${timestamp}`;
+  },
+
+  // Función helper para validar datos de ticket antes de generar
+  validarDatosTicket: (datosTicket) => {
+    const errores = [];
+
+    if (!datosTicket.folio_cita) {
+      errores.push('Folio de cita es requerido');
+    }
+
+    if (!datosTicket.nombre_paciente) {
+      errores.push('Nombre del paciente es requerido');
+    }
+
+    if (!datosTicket.nombre_medico) {
+      errores.push('Nombre del médico es requerido');
+    }
+
+    if (!datosTicket.nombre_especialidad) {
+      errores.push('Especialidad es requerida');
+    }
+
+    if (!datosTicket.total || datosTicket.total <= 0) {
+      errores.push('Total debe ser mayor a 0');
+    }
+
+    return {
+      esValido: errores.length === 0,
+      errores
+    };
+  },
+
+  // Función helper para manejar impresión de tickets
+  imprimirTicket: (ticket, detalles = null) => {
+    try {
+      console.log('🖨️ Preparando impresión de ticket...');
+      
+      // Validar datos antes de imprimir
+      const validacion = authService.validarDatosTicket(ticket);
+      if (!validacion.esValido) {
+        throw new Error('Datos del ticket incompletos: ' + validacion.errores.join(', '));
+      }
+
+      // Generar número de ticket
+      const numeroTicket = authService.generarNumeroTicket(ticket.folio_cita);
+      const fechaEmision = new Date().toLocaleString('es-MX');
+
+      // Generar HTML para impresión
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html lang="es">
+          <head>
+            <title>Ticket de Pago - ${ticket.folio_cita}</title>
+            <meta charset="utf-8">
+            <style>
+              body { 
+                font-family: 'Courier New', monospace; 
+                margin: 0; 
+                padding: 20px;
+                font-size: 12px;
+                line-height: 1.4;
+              }
+              .ticket { 
+                max-width: 300px; 
+                margin: 0 auto; 
+                border: 1px solid #333;
+                padding: 15px;
+              }
+              .header { 
+                text-align: center; 
+                border-bottom: 2px dashed #333; 
+                padding-bottom: 10px; 
+                margin-bottom: 15px;
+              }
+              .info-line {
+                display: flex;
+                justify-content: space-between;
+                margin: 5px 0;
+                font-size: 11px;
+              }
+              .total { 
+                font-size: 14px; 
+                font-weight: bold; 
+                border-top: 2px dashed #333; 
+                padding-top: 10px; 
+                text-align: center;
+                margin-top: 15px;
+              }
+              .footer {
+                text-align: center;
+                margin-top: 15px;
+                font-size: 10px;
+                border-top: 1px dashed #333;
+                padding-top: 10px;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="ticket">
+              <div class="header">
+                <h2>🏥 CLÍNICA MÉDICA</h2>
+                <p>Ticket de Pago</p>
+                <p>No. ${numeroTicket}</p>
+              </div>
+              
+              <div class="info-line">
+                <span><strong>Folio:</strong></span>
+                <span>${ticket.folio_cita}</span>
+              </div>
+              <div class="info-line">
+                <span><strong>Fecha:</strong></span>
+                <span>${authService.formatearFechaCita(ticket.fecha_hora)}</span>
+              </div>
+              <div class="info-line">
+                <span><strong>Paciente:</strong></span>
+                <span>${ticket.nombre_paciente}</span>
+              </div>
+              <div class="info-line">
+                <span><strong>Médico:</strong></span>
+                <span>${ticket.nombre_medico}</span>
+              </div>
+              <div class="info-line">
+                <span><strong>Consultorio:</strong></span>
+                <span>${ticket.consultorio_numero}</span>
+              </div>
+              
+              <hr style="border: 1px dashed #333; margin: 15px 0;">
+              
+              <div class="info-line">
+                <span>Consulta (${ticket.nombre_especialidad})</span>
+                <span>${authService.formatearMonto(ticket.total || 0)}</span>
+              </div>
+              
+              <div class="total">
+                TOTAL: ${authService.formatearMonto(ticket.total || 0)}
+              </div>
+              
+              <div class="footer">
+                <p>Fecha emisión: ${fechaEmision}</p>
+                <p>¡Gracias por su preferencia!</p>
+                <p>* Conserve este ticket *</p>
+              </div>
+            </div>
+            
+            <script>
+              window.onload = function() {
+                window.print();
+                window.onafterprint = function() {
+                  window.close();
+                };
+              };
+            </script>
+          </body>
+        </html>
+      `;
+      
+      // Abrir ventana de impresión
+      const ventanaImpresion = window.open('', '_blank');
+      ventanaImpresion.document.write(htmlContent);
+      ventanaImpresion.document.close();
+      
+      console.log('✅ Ticket enviado a impresión');
+      return true;
+    } catch (error) {
+      console.error('❌ Error al imprimir ticket:', error);
+      throw error;
+    }
+  },
+
+  // Función helper para formatear fecha de manera consistente
+  formatearFechaCita: (fecha, incluirHora = true) => {
+    if (!fecha) return 'Fecha no disponible';
+    
+    try {
+      const fechaObj = new Date(fecha);
+      
+      if (incluirHora) {
+        return fechaObj.toLocaleString('es-MX', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        });
+      } else {
+        return fechaObj.toLocaleDateString('es-MX', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+      }
+    } catch (error) {
+      console.warn('⚠️ Error formateando fecha:', fecha, error);
+      return 'Fecha inválida';
+    }
+  },
+
+  // Formatear datos del doctor para envío al backend
+  formatearDatosDoctor: (formData) => {
+    console.log('🔧 Formateando datos del doctor:', formData);
+    
+    // Convertir horario_turno a número
+    let turnoNumerico = 0; // Matutino por defecto
+    if (formData.horario_turno === 'Vespertino') {
+      turnoNumerico = 1;
+    }
+    
+    const datosFormateados = {
+      // Datos del médico
+      cedula: formData.cedula.trim().toUpperCase(),
+      especialidad_id: parseInt(formData.especialidad_id),
+      consultorio_id: formData.consultorio_id ? parseInt(formData.consultorio_id) : null,
+      
+      // Datos del empleado
+      empleado_nombre: formData.empleado_nombre.trim(),
+      empleado_paterno: formData.empleado_paterno.trim(),
+      empleado_materno: formData.empleado_materno ? formData.empleado_materno.trim() : '',
+      empleado_tel: formData.empleado_tel.replace(/\D/g, ''), // Solo números
+      empleado_correo: formData.empleado_correo.trim().toLowerCase(),
+      empleado_curp: formData.empleado_curp ? formData.empleado_curp.trim().toUpperCase() : '',
+      
+      // Datos del horario
+      horario_inicio: formData.horario_inicio || '08:00:00',
+      horario_fin: formData.horario_fin || '17:00:00',
+      horario_turno: turnoNumerico,
+      
+      // Datos laborales
+      sueldo: parseFloat(formData.sueldo) || 15000,
+      
+      // Opciones
+      crear_usuario: formData.crear_usuario || false
+    };
+    
+    console.log('✅ Datos formateados:', datosFormateados);
+    return datosFormateados;
+  },
 
   // Función helper para obtener el color del badge según el estatus
   obtenerColorEstatus: (estatusId) => {
@@ -538,101 +920,6 @@ crearDoctor: async (datosDoctor) => {
     }
 
     return { valido: true, mensaje: 'Cambio permitido' };
-  },
-
-  // Formatear datos del doctor para envío al backend
-formatearDatosDoctor: (formData) => {
-  console.log('🔧 Formateando datos del doctor:', formData);
-  
-  // Convertir horario_turno a número
-  let turnoNumerico = 0; // Matutino por defecto
-  if (formData.horario_turno === 'Vespertino') {
-    turnoNumerico = 1;
-  }
-  
-  const datosFormateados = {
-    // Datos del médico
-    cedula: formData.cedula.trim().toUpperCase(),
-    especialidad_id: parseInt(formData.especialidad_id),
-    consultorio_id: formData.consultorio_id ? parseInt(formData.consultorio_id) : null,
-    
-    // Datos del empleado
-    empleado_nombre: formData.empleado_nombre.trim(),
-    empleado_paterno: formData.empleado_paterno.trim(),
-    empleado_materno: formData.empleado_materno ? formData.empleado_materno.trim() : '',
-    empleado_tel: formData.empleado_tel.replace(/\D/g, ''), // Solo números
-    empleado_correo: formData.empleado_correo.trim().toLowerCase(),
-    empleado_curp: formData.empleado_curp ? formData.empleado_curp.trim().toUpperCase() : '',
-    
-    // Datos del horario
-    horario_inicio: formData.horario_inicio || '08:00:00',
-    horario_fin: formData.horario_fin || '17:00:00',
-    horario_turno: turnoNumerico,
-    
-    // Datos laborales
-    sueldo: parseFloat(formData.sueldo) || 15000,
-    
-    // Opciones
-    crear_usuario: formData.crear_usuario || false
-  };
-  
-  console.log('✅ Datos formateados:', datosFormateados);
-  return datosFormateados;
-},
-
-
-  // Crear usuario para doctor existente
-crearUsuarioDoctor: async (cedula) => {
-  try {
-    console.log('🔐 Creando usuario para doctor:', cedula);
-    const response = await api.post(`/recepcionista/doctores/${cedula}/crear-usuario`);
-    console.log('✅ Usuario creado para doctor');
-    return response;
-  } catch (error) {
-    console.error('❌ Error creando usuario para doctor:', error);
-    throw error;
-  }
-},
-
-darBajaDoctor: async (cedula) => {
-  try {
-    console.log('🗑️ Dando de baja doctor:', cedula);
-    const response = await api.put(`/recepcionista/doctores/${cedula}/baja`);
-    console.log('✅ Doctor dado de baja');
-    return response;
-  } catch (error) {
-    console.error('❌ Error dando de baja doctor:', error);
-    throw error;
-  }
-},
-
-  // Función helper para formatear fecha de manera consistente
-  formatearFechaCita: (fecha, incluirHora = true) => {
-    if (!fecha) return 'Fecha no disponible';
-    
-    try {
-      const fechaObj = new Date(fecha);
-      
-      if (incluirHora) {
-        return fechaObj.toLocaleString('es-MX', {
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: true
-        });
-      } else {
-        return fechaObj.toLocaleDateString('es-MX', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
-        });
-      }
-    } catch (error) {
-      console.warn('⚠️ Error formateando fecha:', fecha, error);
-      return 'Fecha inválida';
-    }
   },
 
   // Función helper para determinar si una cita está en el pasado

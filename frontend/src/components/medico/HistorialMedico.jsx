@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { authService } from '../../services/authService';
+import { medicoService } from '../../services/medicoService';
 
 const HistorialMedico = ({ medicoCedula, medicoNombre }) => {
   const [vistaActiva, setVistaActiva] = useState('mis-pacientes');
@@ -114,7 +115,7 @@ const HistorialMedico = ({ medicoCedula, medicoNombre }) => {
       console.log('📋 Cargando historial detallado para:', curpPaciente);
       
       // Usar la función del authService para obtener historial del paciente
-      const response = await authService.obtenerHistorialPaciente(curpPaciente);
+      const response = await medicoService.obtenerHistorialPaciente(curpPaciente);
       
       if (response.success && response.data) {
         console.log('✅ Historial cargado:', response.data.length, 'registros');

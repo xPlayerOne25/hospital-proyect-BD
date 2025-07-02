@@ -27,3 +27,6 @@ BEGIN
     WHERE CURP = @curp;
 END;
 GO
+
+
+SELECT * FROM PACIENTE

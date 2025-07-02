@@ -37,6 +37,8 @@ export const medicoService = {
   // GESTIÓN DE PERFIL MÉDICO
   // ===============================
   
+  
+
   async obtenerPerfil(cedula) {
     console.log('🔍 MedicoService.obtenerPerfil - Cédula:', cedula);
     try {
@@ -55,6 +57,11 @@ export const medicoService = {
     }
   },
 
+  
+
+  
+  
+
   async actualizarPerfil(cedula, datos) {
     console.log('✏️ MedicoService.actualizarPerfil - Cédula:', cedula, 'Datos:', datos);
     try {
@@ -70,6 +77,10 @@ export const medicoService = {
       throw error;
     }
   },
+
+  
+
+  
 
   // ===============================
   // GESTIÓN DE CITAS MÉDICAS
@@ -172,16 +183,18 @@ export const medicoService = {
   // GESTIÓN DE PACIENTES
   // ===============================
   
-  async obtenerDatosPaciente(curp) {
-    console.log('👤 MedicoService.obtenerDatosPaciente - CURP:', curp);
-    try {
-      const response = await axios.get(`${API_URL}/medico/pacientes/${curp}`);
-      return response.data;
-    } catch (error) {
-      console.error('❌ Error en obtenerDatosPaciente:', error);
-      throw error;
-    }
-  },
+async obtenerDatosPaciente(curp) {
+  console.log('👤 MedicoService.obtenerDatosPaciente - CURP:', curp);
+  try {
+    const response = await axios.get(`${API_URL}/medico/pacientes/${curp}`);
+    return response.data;
+  } catch (error) {
+    console.error('❌ Error en obtenerDatosPaciente:', error);
+    throw error;
+  }
+},
+
+  
 
   // ===============================
   // GESTIÓN DE HISTORIAL MÉDICO
@@ -197,6 +210,8 @@ export const medicoService = {
       throw error;
     }
   },
+
+  
 
   async agregarHistorialMedico(curp, datos) {
     console.log('➕ MedicoService.agregarHistorialMedico - CURP:', curp, 'Datos:', datos);
@@ -226,6 +241,8 @@ export const medicoService = {
       throw error;
     }
   },
+
+  
 
   // ===============================
   // GESTIÓN DE RECETAS

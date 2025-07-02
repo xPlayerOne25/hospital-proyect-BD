@@ -74,6 +74,9 @@ router.get('/citas/:folio/historial', recepcionistaController.obtenerHistorialCi
 // ✅ Actualizar estatus de una cita específica
 router.put('/citas/:folio/estatus', recepcionistaController.actualizarEstatusCita);
 
+
+
+
 // ===============================
 // GESTIÓN DE COBROS Y TICKETS
 // ===============================
@@ -83,6 +86,7 @@ router.get('/cobros', recepcionistaController.obtenerCobros);
 
 // ✅ Generar ticket específico para una cita
 router.get('/tickets/:folio_cita', validateFolioCita, recepcionistaController.generarTicket);
+
 
 // ===============================
 // CATÁLOGOS Y REFERENCIAS

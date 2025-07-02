@@ -37,6 +37,7 @@ router.put('/citas/atender/:folio_cita', medicoController.marcarCitaAtendida);
 router.post('/citas/atender-completa/:folio_cita', medicoController.atenderCitaCompleta);
 
 
+
 // ===============================
 // GESTIÓN DE PACIENTES
 // ===============================
@@ -52,7 +53,6 @@ router.get('/pacientes/:curp', medicoController.obtenerDatosPaciente);
 router.get('/historial/:curp', medicoController.obtenerHistorialMedico);
 
 // ✅ Agregar entrada al historial médico
-router.post('/historial/:curp', medicoController.agregarHistorialMedico);
 
 // ===============================
 // GESTIÓN DE RECETAS
@@ -61,6 +61,7 @@ router.post('/historial/:curp', medicoController.agregarHistorialMedico);
 // ✅ Obtener todas las recetas del médico
 // Query params: ?fecha_inicio=2024-01-01&fecha_fin=2024-12-31&paciente=Juan
 router.get('/recetas/:cedula', medicoController.obtenerRecetasMedico);
+router.get('/pacientes/:curp', medicoController.getPacientePorCURP);
 
 // ✅ Generar nueva receta
 router.post('/recetas', medicoController.generarReceta);
