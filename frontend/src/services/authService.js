@@ -871,6 +871,10 @@ darBajaDoctor: async (cedula) => {
       return { valido: false, mensaje: 'La cita ya tiene ese estatus' };
     }
 
+    if (estatusNuevo === 2) {
+      return { valido: true, mensaje: 'La cita se pegará' };
+    }
+
     // No modificar citas atendidas
     if (estatusActual === 6 && estatusNuevo !== 6) {
       return { valido: false, mensaje: 'No se puede modificar una cita ya atendida' };

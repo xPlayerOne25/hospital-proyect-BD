@@ -643,7 +643,7 @@ const generarTicket = async (req, res) => {
   try {
     console.log(`🧾 [generarTicket] Generando ticket para folio: ${folioNum}`);
 
-    // Ejecutar el stored procedure
+    // Ejecutar el stored procedure corregido
     const result = await executeStoredProcedure('sp_generarTicketPago', { 
       folio_cita: folioNum 
     });
@@ -657,55 +657,32 @@ const generarTicket = async (req, res) => {
 
     const ticket = result.recordset[0];
     
-    // Asegurar que todos los valores estén formateados correctamente
-    const ticketFormateado = {
-      // Información básica
-      folio_cita: ticket.folio_cita,
-      fecha_hora: ticket.fecha_hora,
-      fecha_hora_formatted: ticket.fecha_hora_formatted,
-      fecha_emision: ticket.fecha_emision,
-      
-      // Información del paciente
-      curp_paciente: ticket.curp_paciente,
-      nombre_paciente: ticket.nombre_paciente,
-      telefono_paciente: ticket.telefono_paciente,
-      edad_paciente: ticket.edad_paciente,
-      
-      // Información del médico
-      cedula_medico: ticket.cedula_medico,
-      nombre_medico: ticket.nombre_medico,
-      correo_medico: ticket.correo_medico,
-      
-      // Información de la consulta
-      id_especialidad: ticket.id_especialidad,
-      nombre_especialidad: ticket.nombre_especialidad,
-      consultorio_numero: ticket.consultorio_numero,
-      
-      // Información del estatus
-      estatus_cita: ticket.estatus_cita,
-      descripcion_estatus: ticket.descripcion_estatus,
-      
-      // Montos (formateados a 2 decimales)
-      costo_especialidad: parseFloat(ticket.costo_especialidad || 0),
-      total_consulta: parseFloat(ticket.total_consulta || 0),
-      total_servicios: parseFloat(ticket.total_servicios || 0),
-      total_medicamentos: parseFloat(ticket.total_medicamentos || 0),
-      total: parseFloat(ticket.total_general || ticket.costo_especialidad || 0),
-      
-      // Información adicional del ticket
-      numero_ticket: `TCK-${folioNum}-${Date.now().toString().slice(-6)}`,
-      fecha_emision_local: new Date().toLocaleString('es-MX')
-    };
+    // Calcular el total
+    const costoEspecialidad = parseFloat(ticket.costo_especialidad) || 0;
+    const totalServicios = parseFloat(ticket.total_servicios) || 0;
+    const totalMedicamentos = parseFloat(ticket.total_medicamentos) || 0;
+    
+    // Agregar total calculado
+    ticket.total = costoEspecialidad + totalServicios + totalMedicamentos;
+
+    // Agregar información adicional del ticket
+    ticket.fecha_emision = new Date().toISOString();
+    ticket.numero_ticket = `TCK-${folioNum}-${Date.now().toString().slice(-6)}`;
+
+    // Asegurar que todos los valores monetarios estén formateados
+    ticket.costo_especialidad = parseFloat(ticket.costo_especialidad || 0);
+    ticket.total_servicios = parseFloat(ticket.total_servicios || 0);
+    ticket.total_medicamentos = parseFloat(ticket.total_medicamentos || 0);
 
     console.log(`✅ [generarTicket] Ticket generado exitosamente:`, {
       folio: folioNum,
-      paciente: ticketFormateado.nombre_paciente,
-      total: ticketFormateado.total.toFixed(2)
+      paciente: ticket.nombre_paciente,
+      total: ticket.total.toFixed(2)
     });
 
     res.json({ 
       success: true, 
-      data: ticketFormateado,
+      data: ticket,
       message: 'Ticket generado correctamente'
     });
 
@@ -731,7 +708,7 @@ const generarTicket = async (req, res) => {
   }
 };
 
-// Función simplificada para obtener detalles (ya que no hay servicios ni medicamentos adicionales)
+// Función corregida para obtener detalles del ticket
 const obtenerDetallesTicket = async (req, res) => {
   const { folio_cita } = req.params;
 
@@ -745,68 +722,119 @@ const obtenerDetallesTicket = async (req, res) => {
   }
 
   try {
-    console.log(`📋 [obtenerDetallesTicket] Obteniendo información básica para folio: ${folioNum}`);
+    console.log(`📋 [obtenerDetallesTicket] Obteniendo detalles para folio: ${folioNum}`);
 
-    // Como no hay servicios ni medicamentos adicionales, solo devolvemos estructura vacía
-    // pero consistente con el frontend
-    const result = await executeStoredProcedure('sp_obtenerInfoBasicaTicket', { 
-      folio_cita: folioNum 
-    });
+    // Ejecutar ambos stored procedures en paralelo
+    const [serviciosResult, medicamentosResult] = await Promise.all([
+      executeStoredProcedure('sp_obtenerServiciosTicket', { folio_cita: folioNum }),
+      executeStoredProcedure('sp_obtenerMedicamentosTicket', { folio_cita: folioNum })
+    ]);
 
-    if (!result.recordset || result.recordset.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'No se encontró información para la cita especificada'
-      });
-    }
+    const servicios = serviciosResult.recordset || [];
+    const medicamentos = medicamentosResult.recordset || [];
 
-    const info = result.recordset[0];
+    // Formatear los datos
+    const serviciosFormateados = servicios.map(servicio => ({
+      ...servicio,
+      costo_servicio: parseFloat(servicio.costo_servicio || 0),
+      cantidad: parseInt(servicio.cantidad || 0),
+      subtotal: parseFloat(servicio.subtotal || 0)
+    }));
+
+    const medicamentosFormateados = medicamentos.map(medicamento => ({
+      ...medicamento,
+      precio_medicamento: parseFloat(medicamento.precio_medicamento || 0),
+      cantidad: parseInt(medicamento.cantidad || 0),
+      subtotal: parseFloat(medicamento.subtotal || 0)
+    }));
+
+    console.log(`✅ [obtenerDetallesTicket] Detalles obtenidos: ${servicios.length} servicios, ${medicamentos.length} medicamentos`);
 
     res.json({
       success: true,
       data: {
-        servicios: [], // Vacío porque no existen en tu esquema
-        medicamentos: [], // Vacío porque no existen en tu esquema
+        servicios: serviciosFormateados,
+        medicamentos: medicamentosFormateados,
         resumen: {
-          total_servicios: 0,
-          total_medicamentos: 0,
-          monto_servicios: 0,
-          monto_medicamentos: 0,
-          monto_consulta: parseFloat(info.costo_especialidad || 0),
-          total_general: parseFloat(info.costo_especialidad || 0)
-        },
-        info_basica: {
-          folio_cita: info.folio_cita,
-          paciente: info.paciente_completo,
-          especialidad: info.nombre_especialidad,
-          medico: info.medico_nombre,
-          consultorio: info.consultorio_numero,
-          estatus: info.estatusCita
+          total_servicios: servicios.length,
+          total_medicamentos: medicamentos.length,
+          monto_servicios: serviciosFormateados.reduce((sum, s) => sum + s.subtotal, 0),
+          monto_medicamentos: medicamentosFormateados.reduce((sum, m) => sum + m.subtotal, 0)
         }
-      },
-      message: 'Información obtenida correctamente'
+      }
     });
 
   } catch (error) {
     console.error('❌ [obtenerDetallesTicket] Error:', error);
     res.status(500).json({
       success: false,
-      message: 'Error al obtener información del ticket',
+      message: 'Error al obtener detalles del ticket',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined,
       // Devolver estructura vacía para que el frontend no falle
       data: {
         servicios: [],
-        medicamentos: [],
-        resumen: {
-          total_servicios: 0,
-          total_medicamentos: 0,
-          monto_servicios: 0,
-          monto_medicamentos: 0
-        }
+        medicamentos: []
       }
     });
   }
 };
+
+// Función adicional para verificar datos antes de generar ticket
+const verificarDatosTicket = async (req, res) => {
+  const { folio_cita } = req.params;
+
+  const folioNum = parseInt(folio_cita);
+  if (isNaN(folioNum)) {
+    return res.status(400).json({
+      success: false,
+      message: 'El folio debe ser un número válido'
+    });
+  }
+
+  try {
+    console.log(`🔍 [verificarDatosTicket] Verificando datos para folio: ${folioNum}`);
+
+    const result = await executeStoredProcedure('sp_verificarDatosTicket', { 
+      folio_cita: folioNum 
+    });
+
+    if (!result.recordset || result.recordset.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No se pudo verificar la información del ticket'
+      });
+    }
+
+    const verificacion = result.recordset[0];
+    
+    // Verificar si hay errores
+    const errores = [];
+    if (verificacion.verificacion_cita !== 'OK') errores.push(verificacion.verificacion_cita);
+    if (verificacion.verificacion_paciente !== 'OK') errores.push(verificacion.verificacion_paciente);
+    if (verificacion.verificacion_medico !== 'OK') errores.push(verificacion.verificacion_medico);
+
+    const tieneErrores = errores.length > 0;
+
+    res.json({
+      success: !tieneErrores,
+      data: {
+        verificacion,
+        errores,
+        puede_generar_ticket: !tieneErrores
+      },
+      message: tieneErrores ? 'Se encontraron errores en la verificación' : 'Datos verificados correctamente'
+    });
+
+  } catch (error) {
+    console.error('❌ [verificarDatosTicket] Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al verificar datos del ticket',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 
 // ===============================
 // CATÁLOGOS

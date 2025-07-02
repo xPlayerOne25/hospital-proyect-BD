@@ -69,7 +69,8 @@ router.get('/citas/estadisticas', recepcionistaController.obtenerEstadisticasCit
 router.post('/citas/procesar-pasadas', recepcionistaController.procesarCitasPasadas);
 
 // ✅ Obtener historial de cambios de una cita específica
-router.get('/citas/:folio/historial', recepcionistaController.obtenerHistorialCita);
+router.get('/ticket/:folio_cita', validateFolioCita, recepcionistaController.generarTicket);
+
 
 // ✅ Actualizar estatus de una cita específica
 router.put('/citas/:folio/estatus', recepcionistaController.actualizarEstatusCita);
